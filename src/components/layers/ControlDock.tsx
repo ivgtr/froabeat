@@ -1,7 +1,11 @@
 import { PLAYBACK_RATE_STEPS } from '../../types/audio'
 import { useAudioStore } from '../../stores/audioStore'
 
-function ControlDock() {
+type ControlDockProps = {
+  onTogglePlay: () => void
+}
+
+function ControlDock({ onTogglePlay }: ControlDockProps) {
   const file = useAudioStore((state) => state.file)
   const isPlaying = useAudioStore((state) => state.isPlaying)
   const isLooping = useAudioStore((state) => state.isLooping)
@@ -12,7 +16,6 @@ function ControlDock() {
   const status = useAudioStore((state) => state.status)
   const statusMessage = useAudioStore((state) => state.statusMessage)
   const warningMessage = useAudioStore((state) => state.warningMessage)
-  const setPlaying = useAudioStore((state) => state.setPlaying)
   const setLooping = useAudioStore((state) => state.setLooping)
   const setPlaybackRateByStep = useAudioStore(
     (state) => state.setPlaybackRateByStep,
@@ -37,7 +40,7 @@ function ControlDock() {
       <button
         type="button"
         className="play-button"
-        onClick={() => setPlaying(!isPlaying)}
+        onClick={onTogglePlay}
         disabled={!canStartPlayback && !canPausePlayback}
       >
         {isPlaying ? '一時停止' : '再生'}

@@ -4,7 +4,7 @@ import type { AudioPlaybackSnapshot, DecodedAudio } from './audioTypes'
 type PlaybackEndedHandler = (() => void) | null
 
 export class AudioEngine {
-  private readonly context: AudioContext
+  private context: AudioContext | null = null
 
   private buffer: AudioBuffer | null = null
 
@@ -21,10 +21,6 @@ export class AudioEngine {
   private didManualStop = false
 
   private onPlaybackEnded: PlaybackEndedHandler = null
-
-  constructor() {
-    this.context = new AudioContext()
-  }
 
   setPlaybackEndedHandler(handler: PlaybackEndedHandler) {
     this.onPlaybackEnded = handler
@@ -44,7 +40,8 @@ export class AudioEngine {
 
     const arrayBuffer = await file.arrayBuffer()
     const decodeInput = arrayBuffer.slice(0)
-    const audioBuffer = await this.context.decodeAudioData(decodeInput)
+    const context = this.getContext()
+    const audioBuffer = await context.decodeAudioData(decodeInput)
     this.buffer = audioBuffer
 
     return {
@@ -59,15 +56,12 @@ export class AudioEngine {
       return
     }
 
-    if (this.context.state === 'suspended') {
-      await this.context.resume()
-    }
-
-    const source = this.context.createBufferSource()
+    const context = await this.ensureContextRunning()
+    const source = context.createBufferSource()
     source.buffer = this.buffer
     source.loop = this.isLooping
-    source.playbackRate.setValueAtTime(this.playbackRate, this.context.currentTime)
-    source.connect(this.context.destination)
+    source.playbackRate.setValueAtTime(this.playbackRate, context.currentTime)
+    source.connect(context.destination)
     source.onended = () => {
       if (this.didManualStop) {
         this.didManualStop = false
@@ -82,7 +76,7 @@ export class AudioEngine {
 
     source.start(0, this.normalizeTime(this.offsetSeconds))
     this.sourceNode = source
-    this.startedAtContextTime = this.context.currentTime
+    this.startedAtContextTime = context.currentTime
   }
 
   pause() {
@@ -108,9 +102,13 @@ export class AudioEngine {
   }
 
   setPlaybackRate(playbackRate: PlaybackRate) {
+    const context = this.context
     if (this.sourceNode) {
       this.captureCurrentOffset()
-      this.sourceNode.playbackRate.setValueAtTime(playbackRate, this.context.currentTime)
+      this.sourceNode.playbackRate.setValueAtTime(
+        playbackRate,
+        context?.currentTime ?? 0,
+      )
     }
 
     this.playbackRate = playbackRate
@@ -125,7 +123,12 @@ export class AudioEngine {
       return this.normalizeTime(this.offsetSeconds)
     }
 
-    const elapsed = (this.context.currentTime - this.startedAtContextTime) * this.playbackRate
+    const context = this.context
+    if (!context) {
+      return this.normalizeTime(this.offsetSeconds)
+    }
+
+    const elapsed = (context.currentTime - this.startedAtContextTime) * this.playbackRate
     return this.normalizeTime(this.offsetSeconds + elapsed)
   }
 
@@ -142,19 +145,25 @@ export class AudioEngine {
   dispose() {
     this.stop()
     this.buffer = null
-    if (this.context.state !== 'closed') {
+    if (this.context && this.context.state !== 'closed') {
       void this.context.close()
     }
+    this.context = null
   }
 
   private captureCurrentOffset() {
+    const context = this.context
     if (!this.sourceNode) {
       return
     }
 
-    const elapsed = (this.context.currentTime - this.startedAtContextTime) * this.playbackRate
+    if (!context) {
+      return
+    }
+
+    const elapsed = (context.currentTime - this.startedAtContextTime) * this.playbackRate
     this.offsetSeconds = this.normalizeTime(this.offsetSeconds + elapsed)
-    this.startedAtContextTime = this.context.currentTime
+    this.startedAtContextTime = context.currentTime
   }
 
   private stopSourceOnly() {
@@ -184,5 +193,27 @@ export class AudioEngine {
     }
 
     return Math.min(this.buffer.duration, Math.max(0, rawTime))
+  }
+
+  private getContext() {
+    if (!this.context || this.context.state === 'closed') {
+      this.context = new AudioContext()
+    }
+
+    return this.context
+  }
+
+  private async ensureContextRunning() {
+    const context = this.getContext()
+
+    if (context.state !== 'running') {
+      await context.resume()
+    }
+
+    if (context.state !== 'running') {
+      throw new Error(`AudioContext is not running: ${context.state}`)
+    }
+
+    return context
   }
 }

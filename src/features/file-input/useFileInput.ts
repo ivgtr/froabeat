@@ -3,6 +3,7 @@ import { classifyFiles } from '../../lib/fileClassifier'
 
 type UseFileInputOptions = {
   onAudioFile?: (file: File) => Promise<void> | void
+  onGifFiles?: (files: File[]) => Promise<void> | void
 }
 
 const buildSummaryMessage = (audioCount: number, gifCount: number): string => {
@@ -16,7 +17,10 @@ const buildInvalidMessage = (invalidNames: string[]): string => {
   return `対応外の形式です: ${targets}${suffix}`
 }
 
-export const useFileInput = ({ onAudioFile }: UseFileInputOptions = {}) => {
+export const useFileInput = ({
+  onAudioFile,
+  onGifFiles,
+}: UseFileInputOptions = {}) => {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const dragDepthRef = useRef(0)
 
@@ -38,26 +42,40 @@ export const useFileInput = ({ onAudioFile }: UseFileInputOptions = {}) => {
     const audioFiles = classified
       .filter((entry) => entry.kind === 'audio')
       .map((entry) => entry.file)
+    const gifFiles = classified
+      .filter((entry) => entry.kind === 'gif')
+      .map((entry) => entry.file)
 
     if (audioCount + gifCount > 0) {
       setHelperMessage(buildSummaryMessage(audioCount, gifCount))
     }
+    let nextErrorMessage =
+      invalidFiles.length > 0 ? buildInvalidMessage(invalidFiles) : null
 
-    if (invalidFiles.length > 0) {
-      setErrorMessage(buildInvalidMessage(invalidFiles))
+    if (audioCount + gifCount === 0) {
+      setErrorMessage(nextErrorMessage)
       return
     }
-
-    setErrorMessage(null)
 
     if (audioFiles.length > 0 && onAudioFile) {
       try {
         await onAudioFile(audioFiles[0])
       } catch (error) {
         console.error(error)
-        setErrorMessage('音声ファイルの読み込みに失敗しました。')
+        nextErrorMessage = '音声ファイルの読み込みに失敗しました。'
       }
     }
+
+    if (gifFiles.length > 0 && onGifFiles) {
+      try {
+        await onGifFiles(gifFiles)
+      } catch (error) {
+        console.error(error)
+        nextErrorMessage = 'GIF ファイルの読み込みに失敗しました。'
+      }
+    }
+
+    setErrorMessage(nextErrorMessage)
   }
 
   const resetDraggingState = () => {

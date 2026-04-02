@@ -1,13 +1,33 @@
 import { create } from 'zustand'
 import { createInitialBoardState, type BoardStore } from '../types/board'
 
+const normalizeSelection = (items: BoardStore['items'], selectedId: string | null) => {
+  const nextSelectedId =
+    selectedId && items.some((item) => item.id === selectedId) ? selectedId : null
+
+  return {
+    selectedItemId: nextSelectedId,
+    items: items.map((item) => ({
+      ...item,
+      isSelected: item.id === nextSelectedId,
+    })),
+  }
+}
+
 export const useBoardStore = create<BoardStore>((set) => ({
   ...createInitialBoardState(),
   setItems: (items) => {
-    set({ items })
+    set((state) => normalizeSelection(items, state.selectedItemId))
+  },
+  addItems: (items) => {
+    set((state) => ({
+      items: [...state.items, ...items.map((item) => ({ ...item, isSelected: false }))],
+    }))
   },
   addItem: (item) => {
-    set((state) => ({ items: [...state.items, item] }))
+    set((state) => ({
+      items: [...state.items, { ...item, isSelected: false }],
+    }))
   },
   removeItem: (id) => {
     set((state) => ({
@@ -22,8 +42,18 @@ export const useBoardStore = create<BoardStore>((set) => ({
       ),
     }))
   },
+  bringItemToFront: (id) => {
+    set((state) => {
+      const maxZIndex = state.items.reduce((max, item) => Math.max(max, item.zIndex), 0)
+      return {
+        items: state.items.map((item) =>
+          item.id === id ? { ...item, zIndex: maxZIndex + 1 } : item,
+        ),
+      }
+    })
+  },
   setSelectedItemId: (id) => {
-    set({ selectedItemId: id })
+    set((state) => normalizeSelection(state.items, id))
   },
   setCamera: (camera) => {
     set({ camera })

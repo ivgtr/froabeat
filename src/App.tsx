@@ -8,7 +8,9 @@ import { analyzeTempo } from './features/audio/analyzeTempo'
 import { AudioEngine } from './features/audio/audioEngine'
 import { BeatScheduler } from './features/audio/beatScheduler'
 import { useFileInput } from './features/file-input/useFileInput'
+import { createGifItems } from './lib/gifItemFactory'
 import { useAudioStore } from './stores/audioStore'
+import { useBoardStore } from './stores/boardStore'
 import './styles/app.css'
 
 function App() {
@@ -30,6 +32,32 @@ function App() {
   const setStatus = useAudioStore((state) => state.setStatus)
   const setWarningMessage = useAudioStore((state) => state.setWarningMessage)
   const markBeat = useAudioStore((state) => state.markBeat)
+  const addItems = useBoardStore((state) => state.addItems)
+  const resetBoard = useBoardStore((state) => state.resetBoard)
+
+  const handleGifFiles = useCallback(
+    async (files: File[]) => {
+      if (files.length === 0) {
+        return
+      }
+
+      const state = useBoardStore.getState()
+      const maxZIndex = state.items.reduce(
+        (max, item) => Math.max(max, item.zIndex),
+        0,
+      )
+      const nextItems = await createGifItems({
+        files,
+        camera: state.camera,
+        viewportWidth: window.innerWidth,
+        viewportHeight: window.innerHeight,
+        startZIndex: maxZIndex,
+      })
+
+      addItems(nextItems)
+    },
+    [addItems],
+  )
 
   const handleAudioFile = useCallback(
     async (file: File) => {
@@ -94,6 +122,35 @@ function App() {
     ],
   )
 
+  const handleTogglePlay = useCallback(() => {
+    const engine = audioEngineRef.current
+    const state = useAudioStore.getState()
+
+    if (state.isPlaying) {
+      engine.pause()
+      setCurrentTime(engine.getCurrentTime())
+      setPlaying(false)
+      return
+    }
+
+    if (!engine.hasBuffer()) {
+      setStatus('error', '先に音声ファイルを読み込んでください。')
+      setPlaying(false)
+      return
+    }
+
+    void engine
+      .play()
+      .then(() => {
+        setPlaying(true)
+      })
+      .catch((error: unknown) => {
+        console.error(error)
+        setPlaying(false)
+        setStatus('error', '再生を開始できませんでした。')
+      })
+  }, [setCurrentTime, setPlaying, setStatus])
+
   const {
     fileInputRef,
     isDragging,
@@ -105,7 +162,7 @@ function App() {
     handleDrop,
     openFilePicker,
     handleFileInputChange,
-  } = useFileInput({ onAudioFile: handleAudioFile })
+  } = useFileInput({ onAudioFile: handleAudioFile, onGifFiles: handleGifFiles })
 
   useEffect(() => {
     const engine = audioEngineRef.current
@@ -120,9 +177,15 @@ function App() {
         URL.revokeObjectURL(objectUrlRef.current)
         objectUrlRef.current = null
       }
-      engine.dispose()
+      const boardState = useBoardStore.getState()
+      for (const item of boardState.items) {
+        URL.revokeObjectURL(item.src)
+      }
+      resetBoard()
+      engine.setPlaybackEndedHandler(null)
+      engine.stop()
     }
-  }, [setCurrentTime, setPlaying])
+  }, [resetBoard, setCurrentTime, setPlaying])
 
   useEffect(() => {
     audioEngineRef.current.setLooping(isLooping)
@@ -136,28 +199,6 @@ function App() {
     beatSchedulerRef.current.configure({ bpm, beatOffset })
     beatSchedulerRef.current.reset(audioEngineRef.current.getCurrentTime())
   }, [beatOffset, bpm])
-
-  useEffect(() => {
-    const engine = audioEngineRef.current
-
-    if (!isPlaying) {
-      engine.pause()
-      setCurrentTime(engine.getCurrentTime())
-      return
-    }
-
-    if (!engine.hasBuffer()) {
-      setPlaying(false)
-      setStatus('error', '先に音声ファイルを読み込んでください。')
-      return
-    }
-
-    void engine.play().catch((error: unknown) => {
-      console.error(error)
-      setPlaying(false)
-      setStatus('error', '再生を開始できませんでした。')
-    })
-  }, [isPlaying, setCurrentTime, setPlaying, setStatus])
 
   useEffect(() => {
     if (!isPlaying) {
@@ -206,7 +247,7 @@ function App() {
           onInputChange={handleFileInputChange}
         />
       }
-      controlLayer={<ControlDock />}
+      controlLayer={<ControlDock onTogglePlay={handleTogglePlay} />}
     />
   )
 }

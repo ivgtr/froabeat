@@ -25,9 +25,11 @@ export type BoardState = {
 
 export type BoardActions = {
   setItems: (items: GifItem[]) => void
+  addItems: (items: GifItem[]) => void
   addItem: (item: GifItem) => void
   removeItem: (id: string) => void
   updateItem: (id: string, patch: Partial<GifItem>) => void
+  bringItemToFront: (id: string) => void
   setSelectedItemId: (id: string | null) => void
   setCamera: (camera: CameraState) => void
   panCamera: (dx: number, dy: number) => void
