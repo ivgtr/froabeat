@@ -1,6 +1,10 @@
 import { useRef, useState, type ChangeEvent, type DragEvent } from 'react'
 import { classifyFiles } from '../../lib/fileClassifier'
 
+type UseFileInputOptions = {
+  onAudioFile?: (file: File) => Promise<void> | void
+}
+
 const buildSummaryMessage = (audioCount: number, gifCount: number): string => {
   return `受け付け: 音声 ${audioCount}件 / GIF ${gifCount}件`
 }
@@ -12,7 +16,7 @@ const buildInvalidMessage = (invalidNames: string[]): string => {
   return `対応外の形式です: ${targets}${suffix}`
 }
 
-export const useFileInput = () => {
+export const useFileInput = ({ onAudioFile }: UseFileInputOptions = {}) => {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const dragDepthRef = useRef(0)
 
@@ -20,7 +24,7 @@ export const useFileInput = () => {
   const [helperMessage, setHelperMessage] = useState<string | null>(null)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
-  const handleFiles = (files: File[]) => {
+  const handleFiles = async (files: File[]) => {
     if (files.length === 0) {
       return
     }
@@ -31,6 +35,9 @@ export const useFileInput = () => {
     const invalidFiles = classified
       .filter((entry) => entry.kind === 'invalid')
       .map((entry) => entry.file.name)
+    const audioFiles = classified
+      .filter((entry) => entry.kind === 'audio')
+      .map((entry) => entry.file)
 
     if (audioCount + gifCount > 0) {
       setHelperMessage(buildSummaryMessage(audioCount, gifCount))
@@ -42,6 +49,15 @@ export const useFileInput = () => {
     }
 
     setErrorMessage(null)
+
+    if (audioFiles.length > 0 && onAudioFile) {
+      try {
+        await onAudioFile(audioFiles[0])
+      } catch (error) {
+        console.error(error)
+        setErrorMessage('音声ファイルの読み込みに失敗しました。')
+      }
+    }
   }
 
   const resetDraggingState = () => {
@@ -77,7 +93,7 @@ export const useFileInput = () => {
 
     const droppedFiles = Array.from(event.dataTransfer.files)
     resetDraggingState()
-    handleFiles(droppedFiles)
+    void handleFiles(droppedFiles)
   }
 
   const openFilePicker = () => {
@@ -86,7 +102,7 @@ export const useFileInput = () => {
 
   const handleFileInputChange = (event: ChangeEvent<HTMLInputElement>) => {
     const selectedFiles = Array.from(event.target.files ?? [])
-    handleFiles(selectedFiles)
+    void handleFiles(selectedFiles)
     event.target.value = ''
   }
 

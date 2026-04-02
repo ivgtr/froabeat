@@ -61,4 +61,16 @@ export const useAudioStore = create<AudioStore>((set, get) => ({
   setBeatOffset: (beatOffset) => {
     set({ beatOffset })
   },
+  setStatus: (status, statusMessage = null) => {
+    set({ status, statusMessage })
+  },
+  setWarningMessage: (warningMessage) => {
+    set({ warningMessage })
+  },
+  markBeat: (beatEventTime) => {
+    set((state) => ({
+      beatEventTime,
+      beatPulse: state.beatPulse + 1,
+    }))
+  },
 }))

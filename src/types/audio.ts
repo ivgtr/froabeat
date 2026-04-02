@@ -2,6 +2,8 @@ export const PLAYBACK_RATE_STEPS = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0] as const
 
 export type PlaybackRate = (typeof PLAYBACK_RATE_STEPS)[number]
 
+export type AudioLoadStatus = 'idle' | 'loading' | 'analyzing' | 'ready' | 'error'
+
 export type AudioState = {
   file: File | null
   url: string | null
@@ -12,6 +14,11 @@ export type AudioState = {
   bpm: number | null
   beatOffset: number | null
   isLooping: boolean
+  status: AudioLoadStatus
+  statusMessage: string | null
+  warningMessage: string | null
+  beatPulse: number
+  beatEventTime: number | null
 }
 
 export type AudioActions = {
@@ -26,6 +33,9 @@ export type AudioActions = {
   setLooping: (isLooping: boolean) => void
   setBpm: (bpm: number | null) => void
   setBeatOffset: (offset: number | null) => void
+  setStatus: (status: AudioLoadStatus, message?: string | null) => void
+  setWarningMessage: (message: string | null) => void
+  markBeat: (time: number) => void
 }
 
 export type AudioStore = AudioState & AudioActions
@@ -40,4 +50,9 @@ export const createInitialAudioState = (): AudioState => ({
   bpm: null,
   beatOffset: null,
   isLooping: true,
+  status: 'idle',
+  statusMessage: null,
+  warningMessage: null,
+  beatPulse: 0,
+  beatEventTime: null,
 })

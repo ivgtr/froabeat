@@ -41,6 +41,7 @@
   inset: 0;
   display: grid;
   place-items: center;
+  overflow: hidden;
   pointer-events: none;
 }
 
@@ -51,20 +52,46 @@
 }
 
 .beat-core {
-  width: 28px;
-  height: 28px;
+  width: 30px;
+  height: 30px;
   background: #ecff9a;
-  box-shadow:
-    0 0 24px rgba(236, 255, 154, 0.5),
-    0 0 56px rgba(236, 255, 154, 0.35);
-  animation: pulse-core 2s ease-in-out infinite;
+  transform: scale(0.86);
+}
+
+.beat-core.is-animated {
+  animation: beat-core-pulse 300ms ease-out;
 }
 
 .beat-ring {
-  width: 120px;
-  height: 120px;
+  width: 240px;
+  height: 240px;
   border: 2px solid rgba(236, 255, 154, 0.6);
-  animation: pulse-ring 2s ease-out infinite;
+  transform: scale(0.58);
+  opacity: 0.2;
+}
+
+.beat-ring.is-animated {
+  animation: beat-ring-pulse 420ms ease-out;
+}
+
+.beat-ring.ring-b {
+  border-color: rgba(163, 252, 255, 0.5);
+}
+
+.beat-ring.ring-c {
+  border-color: rgba(255, 183, 122, 0.45);
+}
+
+.beat-meta {
+  position: absolute;
+  margin: 188px 0 0;
+  padding: 5px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(0, 0, 0, 0.4);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: rgba(255, 255, 255, 0.86);
 }
 
 .overlay-layer {
@@ -166,6 +193,11 @@
   cursor: pointer;
 }
 
+.play-button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 .rate-control {
   display: grid;
   grid-template-columns: 32px 1fr 32px;
@@ -203,6 +235,69 @@
   color: rgba(255, 255, 255, 0.56);
 }
 
+.dock-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 10px;
+  gap: 8px;
+}
+
+.loop-button {
+  min-width: 86px;
+  height: 30px;
+  padding: 0 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(240, 244, 247, 0.28);
+  background: rgba(255, 255, 255, 0.08);
+  color: #f0f4f7;
+  font-family: inherit;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.loop-button.is-active {
+  border-color: rgba(236, 255, 154, 0.55);
+  color: #ecff9a;
+}
+
+.loop-button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.time-display {
+  margin: 0;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.dock-status {
+  margin: 8px 0 0;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.dock-status.is-loading,
+.dock-status.is-analyzing {
+  color: #9ad6ff;
+}
+
+.dock-status.is-ready {
+  color: #a8ffb0;
+}
+
+.dock-status.is-error {
+  color: #ff958f;
+}
+
+.dock-warning {
+  margin: 8px 0 0;
+  font-size: 11px;
+  line-height: 1.4;
+  color: #ffd992;
+}
+
 .sr-only {
   position: absolute;
   width: 1px;
@@ -215,26 +310,48 @@
   white-space: nowrap;
 }
 
-@keyframes pulse-core {
-  0%,
-  100% {
-    transform: scale(0.88);
+@keyframes beat-core-pulse {
+  0% {
+    transform: scale(0.86);
+    filter: brightness(1);
   }
 
-  50% {
-    transform: scale(1.1);
+  35% {
+    transform: scale(1.56);
+    filter: brightness(1.24);
+  }
+
+  65% {
+    transform: scale(1.16);
+    filter: brightness(1.1);
+  }
+
+  100% {
+    transform: scale(0.86);
+    filter: brightness(1);
   }
 }
 
-@keyframes pulse-ring {
+@keyframes beat-ring-pulse {
   0% {
-    transform: scale(0.72);
-    opacity: 0.95;
+    transform: scale(0.58);
+    opacity: 0.28;
+  }
+
+  35% {
+    opacity: 0.54;
   }
 
   100% {
-    transform: scale(1.2);
+    transform: scale(2.8);
     opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .beat-core.is-animated,
+  .beat-ring.is-animated {
+    animation: none;
   }
 }
 
