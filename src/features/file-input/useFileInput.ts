@@ -1,9 +1,11 @@
 import { useRef, useState, type ChangeEvent, type DragEvent } from 'react'
 import { classifyFiles } from '../../lib/fileClassifier'
 
+type DropPoint = { x: number; y: number }
+
 type UseFileInputOptions = {
   onAudioFile?: (file: File) => Promise<void> | void
-  onGifFiles?: (files: File[]) => Promise<void> | void
+  onGifFiles?: (files: File[], dropPoint?: DropPoint) => Promise<void> | void
 }
 
 const buildSummaryMessage = (audioCount: number, gifCount: number): string => {
@@ -28,7 +30,7 @@ export const useFileInput = ({
   const [helperMessage, setHelperMessage] = useState<string | null>(null)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
-  const handleFiles = async (files: File[]) => {
+  const handleFiles = async (files: File[], dropPoint?: DropPoint) => {
     if (files.length === 0) {
       return
     }
@@ -68,7 +70,7 @@ export const useFileInput = ({
 
     if (gifFiles.length > 0 && onGifFiles) {
       try {
-        await onGifFiles(gifFiles)
+        await onGifFiles(gifFiles, dropPoint)
       } catch (error) {
         console.error(error)
         nextErrorMessage = 'GIF ファイルの読み込みに失敗しました。'
@@ -110,8 +112,9 @@ export const useFileInput = ({
     event.stopPropagation()
 
     const droppedFiles = Array.from(event.dataTransfer.files)
+    const dropPoint: DropPoint = { x: event.clientX, y: event.clientY }
     resetDraggingState()
-    void handleFiles(droppedFiles)
+    void handleFiles(droppedFiles, dropPoint)
   }
 
   const openFilePicker = () => {

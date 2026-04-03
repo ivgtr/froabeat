@@ -37,7 +37,7 @@ function App() {
   const resetBoard = useBoardStore((state) => state.resetBoard)
 
   const handleGifFiles = useCallback(
-    async (files: File[]) => {
+    async (files: File[], dropPoint?: { x: number; y: number }) => {
       if (files.length === 0) {
         return
       }
@@ -53,6 +53,7 @@ function App() {
         viewportWidth: window.innerWidth,
         viewportHeight: window.innerHeight,
         startZIndex: maxZIndex,
+        dropPoint,
       })
 
       addItems(nextItems)

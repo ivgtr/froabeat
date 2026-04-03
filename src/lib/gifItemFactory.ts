@@ -55,6 +55,7 @@ type CreateGifItemsOptions = {
   viewportWidth: number
   viewportHeight: number
   startZIndex: number
+  dropPoint?: { x: number; y: number }
 }
 
 export const createGifItems = async ({
@@ -63,9 +64,14 @@ export const createGifItems = async ({
   viewportWidth,
   viewportHeight,
   startZIndex,
+  dropPoint,
 }: CreateGifItemsOptions): Promise<GifItem[]> => {
-  const centerX = camera.x + viewportWidth / 2
-  const centerY = camera.y + viewportHeight / 2
+  const centerX = dropPoint
+    ? camera.x + dropPoint.x / camera.zoom
+    : camera.x + viewportWidth / 2
+  const centerY = dropPoint
+    ? camera.y + dropPoint.y / camera.zoom
+    : camera.y + viewportHeight / 2
 
   return await Promise.all(
     files.map(async (file, index) => {
