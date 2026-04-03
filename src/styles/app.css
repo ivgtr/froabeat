@@ -176,55 +176,6 @@
   opacity: 0.9;
 }
 
-.drop-panel {
-  position: absolute;
-  top: 20px;
-  left: 24px;
-  pointer-events: auto;
-  margin: 0;
-  padding: 6px 10px;
-  border: 1px solid var(--line-soft);
-  border-radius: 3px;
-  background: var(--surface-soft);
-}
-
-.drop-guide {
-  margin: 0;
-  font-family: var(--font-mono);
-  font-size: 11px;
-  color: var(--text-muted);
-  letter-spacing: 0.02em;
-}
-
-.drop-browse-button {
-  padding: 0;
-  border: 0;
-  border-bottom: 1px solid var(--line-strong);
-  background: transparent;
-  color: var(--color-text);
-  font-family: var(--font-mono);
-  font-size: 11px;
-  letter-spacing: 0.02em;
-  cursor: pointer;
-  transition: opacity 0.24s ease-out;
-}
-
-.drop-browse-button:hover {
-  opacity: 0.7;
-}
-
-.drop-feedback,
-.drop-error {
-  margin: 4px 0 0;
-  font-family: var(--font-mono);
-  font-size: 11px;
-  color: var(--text-muted);
-}
-
-.drop-error {
-  color: var(--color-text);
-}
-
 .control-dock {
   position: absolute;
   right: 24px;
@@ -414,18 +365,12 @@
   }
 
   .drop-tint,
-  .dock-btn,
-  .drop-browse-button {
+  .dock-btn {
     transition: none;
   }
 }
 
 @media (max-width: 720px) {
-  .drop-panel {
-    left: 12px;
-    top: 12px;
-  }
-
   .control-dock {
     right: 12px;
     bottom: 12px;

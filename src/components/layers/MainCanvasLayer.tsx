@@ -254,7 +254,11 @@ const isOutsideViewport = (
   )
 }
 
-function MainCanvasLayer() {
+type MainCanvasLayerProps = {
+  onOpenFilePicker?: (dropPoint?: { x: number; y: number }) => void
+}
+
+function MainCanvasLayer({ onOpenFilePicker }: MainCanvasLayerProps) {
   const boardRef = useRef<HTMLDivElement>(null)
   const interactionRef = useRef<Interaction | null>(null)
   const touchPointsRef = useRef<Map<number, TouchPoint>>(new Map())
@@ -724,6 +728,15 @@ function MainCanvasLayer() {
     applyZoomAtPoint(cameraZoom * zoomFactor, viewportX, viewportY)
   }
 
+  const handleDoubleClick = useCallback(
+    (event: ReactMouseEvent<HTMLDivElement>) => {
+      const target = event.target as HTMLElement
+      if (target.closest('[data-gif-id]')) return
+      onOpenFilePicker?.({ x: event.clientX, y: event.clientY })
+    },
+    [onOpenFilePicker],
+  )
+
   return (
     <main
       ref={boardRef}
@@ -734,6 +747,7 @@ function MainCanvasLayer() {
       onPointerUp={handlePointerUp}
       onPointerCancel={handlePointerCancel}
       onWheel={handleWheel}
+      onDoubleClick={handleDoubleClick}
     >
       <div
         className="canvas-grid"
@@ -785,9 +799,7 @@ function MainCanvasLayer() {
         })}
       </div>
       <p className="canvas-caption">
-        {`FroaBeat Infinite Canvas / GIF ${items.length}件 / Camera (${Math.round(
-          camera.x,
-        )}, ${Math.round(camera.y)})${isLowPowerMode ? ' / LOW-POWER' : ''}`}
+        {`音声 / GIF をドロップ · (${Math.round(camera.x)}, ${Math.round(camera.y)})${isLowPowerMode ? ' · LOW-POWER' : ''}`}
       </p>
     </main>
   )

@@ -17,6 +17,7 @@ function App() {
   const audioEngineRef = useRef<AudioEngine>(new AudioEngine())
   const beatSchedulerRef = useRef<BeatScheduler>(new BeatScheduler())
   const objectUrlRef = useRef<string | null>(null)
+  const pendingDropPointRef = useRef<{ x: number; y: number } | undefined>(undefined)
 
   const isPlaying = useAudioStore((state) => state.isPlaying)
   const playbackRate = useAudioStore((state) => state.playbackRate)
@@ -42,6 +43,9 @@ function App() {
         return
       }
 
+      const resolvedDropPoint = dropPoint ?? pendingDropPointRef.current
+      pendingDropPointRef.current = undefined
+
       const state = useBoardStore.getState()
       const maxZIndex = state.items.reduce(
         (max, item) => Math.max(max, item.zIndex),
@@ -53,7 +57,7 @@ function App() {
         viewportWidth: window.innerWidth,
         viewportHeight: window.innerHeight,
         startZIndex: maxZIndex,
-        dropPoint,
+        dropPoint: resolvedDropPoint,
       })
 
       addItems(nextItems)
@@ -101,7 +105,16 @@ function App() {
         beatSchedulerRef.current.reset(0)
         resetSyncBase(0)
 
-        setStatus('ready', `${file.name} を読み込みました`)
+        await engine.play()
+        const snapshot = engine.getSnapshot()
+        if (snapshot.isPlaying) {
+          setPlaybackTime(snapshot.currentTime)
+          resetSyncBase(snapshot.currentTime)
+          setPlaying(true)
+          setStatus('ready', '再生中')
+        } else {
+          setStatus('ready', `${file.name} を読み込みました`)
+        }
       } catch (error) {
         console.error(error)
         setStatus('error', '音声の読み込みに失敗しました。')
@@ -171,8 +184,6 @@ function App() {
   const {
     fileInputRef,
     isDragging,
-    helperMessage,
-    errorMessage,
     handleDragEnter,
     handleDragOver,
     handleDragLeave,
@@ -267,15 +278,19 @@ function App() {
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
-      mainLayer={<MainCanvasLayer />}
+      mainLayer={
+        <MainCanvasLayer
+          onOpenFilePicker={(dropPoint) => {
+            pendingDropPointRef.current = dropPoint
+            openFilePicker()
+          }}
+        />
+      }
       centerLayer={<BeatCenterLayer />}
       overlayLayer={
         <DropOverlay
           fileInputRef={fileInputRef}
           isDragging={isDragging}
-          helperMessage={helperMessage}
-          errorMessage={errorMessage}
-          onBrowse={openFilePicker}
           onInputChange={handleFileInputChange}
         />
       }
