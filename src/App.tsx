@@ -25,13 +25,14 @@ function App() {
   const beatOffset = useAudioStore((state) => state.beatOffset)
   const setAudioFile = useAudioStore((state) => state.setAudioFile)
   const setPlaying = useAudioStore((state) => state.setPlaying)
-  const setCurrentTime = useAudioStore((state) => state.setCurrentTime)
+  const setPlaybackTime = useAudioStore((state) => state.setPlaybackTime)
   const setDuration = useAudioStore((state) => state.setDuration)
   const setBpm = useAudioStore((state) => state.setBpm)
   const setBeatOffset = useAudioStore((state) => state.setBeatOffset)
   const setStatus = useAudioStore((state) => state.setStatus)
   const setWarningMessage = useAudioStore((state) => state.setWarningMessage)
   const markBeat = useAudioStore((state) => state.markBeat)
+  const resetSyncBase = useAudioStore((state) => state.resetSyncBase)
   const addItems = useBoardStore((state) => state.addItems)
   const resetBoard = useBoardStore((state) => state.resetBoard)
 
@@ -80,7 +81,7 @@ function App() {
 
         setAudioFile(file, url, decoded.duration)
         setDuration(decoded.duration)
-        setCurrentTime(0)
+        setPlaybackTime(0)
 
         setStatus('analyzing', 'テンポを解析中...')
         const tempo = analyzeTempo(decoded.audioBuffer)
@@ -97,6 +98,7 @@ function App() {
           beatOffset: tempo.beatOffset,
         })
         beatSchedulerRef.current.reset(0)
+        resetSyncBase(0)
 
         setStatus('ready', `${file.name} を読み込みました`)
       } catch (error) {
@@ -105,7 +107,7 @@ function App() {
         setWarningMessage('対応形式またはファイル状態を確認してください。')
         setBpm(null)
         setBeatOffset(null)
-        setCurrentTime(0)
+        setPlaybackTime(0)
       }
     },
     [
@@ -114,11 +116,12 @@ function App() {
       setAudioFile,
       setBeatOffset,
       setBpm,
-      setCurrentTime,
       setDuration,
       setPlaying,
+      setPlaybackTime,
       setStatus,
       setWarningMessage,
+      resetSyncBase,
     ],
   )
 
@@ -128,7 +131,9 @@ function App() {
 
     if (state.isPlaying) {
       engine.pause()
-      setCurrentTime(engine.getCurrentTime())
+      const currentTime = engine.getCurrentTime()
+      setPlaybackTime(currentTime)
+      resetSyncBase(currentTime)
       setPlaying(false)
       setStatus('ready', '一時停止しました。')
       return
@@ -147,7 +152,8 @@ function App() {
         if (!snapshot.isPlaying) {
           throw new Error('Playback source was not started')
         }
-        setCurrentTime(snapshot.currentTime)
+        setPlaybackTime(snapshot.currentTime)
+        resetSyncBase(snapshot.currentTime)
         setPlaying(true)
         setStatus('ready', '再生中')
       })
@@ -159,7 +165,7 @@ function App() {
           `再生を開始できませんでした（context: ${engine.getContextState()}）。`,
         )
       })
-  }, [setCurrentTime, setPlaying, setStatus])
+  }, [setPlaybackTime, setPlaying, setStatus, resetSyncBase])
 
   const {
     fileInputRef,
@@ -178,7 +184,8 @@ function App() {
     const engine = audioEngineRef.current
     engine.setPlaybackEndedHandler(() => {
       setPlaying(false)
-      setCurrentTime(0)
+      setPlaybackTime(0)
+      resetSyncBase(0)
       beatSchedulerRef.current.reset(0)
     })
 
@@ -187,28 +194,29 @@ function App() {
         URL.revokeObjectURL(objectUrlRef.current)
         objectUrlRef.current = null
       }
-      const boardState = useBoardStore.getState()
-      for (const item of boardState.items) {
-        URL.revokeObjectURL(item.src)
-      }
       resetBoard()
       engine.setPlaybackEndedHandler(null)
       engine.stop()
     }
-  }, [resetBoard, setCurrentTime, setPlaying])
+  }, [resetBoard, setPlaybackTime, setPlaying, resetSyncBase])
 
   useEffect(() => {
     audioEngineRef.current.setLooping(isLooping)
-  }, [isLooping])
+    resetSyncBase(audioEngineRef.current.getCurrentTime())
+    beatSchedulerRef.current.reset(audioEngineRef.current.getCurrentTime())
+  }, [isLooping, resetSyncBase])
 
   useEffect(() => {
     audioEngineRef.current.setPlaybackRate(playbackRate)
-  }, [playbackRate])
+    resetSyncBase(audioEngineRef.current.getCurrentTime())
+    beatSchedulerRef.current.reset(audioEngineRef.current.getCurrentTime())
+  }, [playbackRate, resetSyncBase])
 
   useEffect(() => {
     beatSchedulerRef.current.configure({ bpm, beatOffset })
     beatSchedulerRef.current.reset(audioEngineRef.current.getCurrentTime())
-  }, [beatOffset, bpm])
+    resetSyncBase(audioEngineRef.current.getCurrentTime())
+  }, [beatOffset, bpm, resetSyncBase])
 
   useEffect(() => {
     if (!isPlaying) {
@@ -222,10 +230,11 @@ function App() {
     const tick = () => {
       const snapshot = engine.getSnapshot()
       const currentTime = snapshot.currentTime
-      setCurrentTime(currentTime)
+      setPlaybackTime(currentTime)
 
-      if (scheduler.consume(currentTime)) {
-        markBeat(currentTime)
+      const beatEvent = scheduler.consume(currentTime)
+      if (beatEvent) {
+        markBeat(beatEvent.beatTime, beatEvent.beatIndex)
       }
 
       if (!snapshot.isPlaying) {
@@ -249,7 +258,7 @@ function App() {
     return () => {
       cancelAnimationFrame(frameId)
     }
-  }, [isPlaying, markBeat, setCurrentTime, setPlaying, setStatus])
+  }, [isPlaying, markBeat, setPlaybackTime, setPlaying, setStatus])
 
   return (
     <AppShell

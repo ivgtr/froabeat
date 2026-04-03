@@ -1,4 +1,9 @@
-import type { CameraState, GifItem } from '../types/board'
+import {
+  createDefaultGifSyncSettings,
+  type CameraState,
+  type GifItem,
+} from '../types/board'
+import { createGifPlaybackData } from '../features/gif/gifPlayback'
 
 const DEFAULT_SIZE = 240
 const MIN_SIZE = 72
@@ -67,6 +72,12 @@ export const createGifItems = async ({
       const src = URL.createObjectURL(file)
       const naturalSize = await resolveNaturalSize(src)
       const initialSize = fitInitialSize(naturalSize.width, naturalSize.height)
+      const playback = await createGifPlaybackData(file)
+      const syncDefaults = createDefaultGifSyncSettings()
+      const initialSyncMode =
+        playback.mode === 'decoded' && playback.frames.length > 1
+          ? 'tempo'
+          : syncDefaults.syncMode
       const offset = index * OFFSET_STEP
 
       return {
@@ -78,6 +89,11 @@ export const createGifItems = async ({
         width: initialSize.width,
         height: initialSize.height,
         rotation: 0,
+        playback,
+        syncMode: initialSyncMode,
+        syncStrength: syncDefaults.syncStrength,
+        beatDivision: syncDefaults.beatDivision,
+        phaseOffset: syncDefaults.phaseOffset,
         zIndex: startZIndex + index + 1,
         isSelected: false,
       }

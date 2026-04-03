@@ -5,6 +5,7 @@ import {
   type AudioStore,
   type PlaybackRate,
 } from '../types/audio'
+import { calculateBeatMetrics } from '../features/audio/beatMath'
 
 const clampPlaybackRateStep = (
   currentRate: PlaybackRate,
@@ -22,12 +23,22 @@ const clampPlaybackRateStep = (
 export const useAudioStore = create<AudioStore>((set, get) => ({
   ...createInitialAudioState(),
   setAudioFile: (file, url, duration = 0) => {
+    const nextMetrics = calculateBeatMetrics({
+      currentTime: 0,
+      bpm: get().bpm,
+      beatOffset: get().beatOffset,
+    })
     set({
       file,
       url,
       duration,
       currentTime: 0,
       isPlaying: false,
+      beatIndex: nextMetrics.beatIndex,
+      beatPhase: nextMetrics.beatPhase,
+      beatProgress: nextMetrics.beatProgress,
+      beatInterval: nextMetrics.beatInterval,
+      syncResetToken: get().syncResetToken + 1,
     })
   },
   clearAudioFile: () => {
@@ -49,6 +60,21 @@ export const useAudioStore = create<AudioStore>((set, get) => ({
   setCurrentTime: (time) => {
     set({ currentTime: time })
   },
+  setPlaybackTime: (time) => {
+    const { bpm, beatOffset } = get()
+    const nextMetrics = calculateBeatMetrics({
+      currentTime: time,
+      bpm,
+      beatOffset,
+    })
+    set({
+      currentTime: time,
+      beatIndex: nextMetrics.beatIndex,
+      beatPhase: nextMetrics.beatPhase,
+      beatProgress: nextMetrics.beatProgress,
+      beatInterval: nextMetrics.beatInterval,
+    })
+  },
   setDuration: (duration) => {
     set({ duration })
   },
@@ -56,10 +82,34 @@ export const useAudioStore = create<AudioStore>((set, get) => ({
     set({ isLooping })
   },
   setBpm: (bpm) => {
-    set({ bpm })
+    const nextMetrics = calculateBeatMetrics({
+      currentTime: get().currentTime,
+      bpm,
+      beatOffset: get().beatOffset,
+    })
+    set({
+      bpm,
+      beatIndex: nextMetrics.beatIndex,
+      beatPhase: nextMetrics.beatPhase,
+      beatProgress: nextMetrics.beatProgress,
+      beatInterval: nextMetrics.beatInterval,
+      syncResetToken: get().syncResetToken + 1,
+    })
   },
   setBeatOffset: (beatOffset) => {
-    set({ beatOffset })
+    const nextMetrics = calculateBeatMetrics({
+      currentTime: get().currentTime,
+      bpm: get().bpm,
+      beatOffset,
+    })
+    set({
+      beatOffset,
+      beatIndex: nextMetrics.beatIndex,
+      beatPhase: nextMetrics.beatPhase,
+      beatProgress: nextMetrics.beatProgress,
+      beatInterval: nextMetrics.beatInterval,
+      syncResetToken: get().syncResetToken + 1,
+    })
   },
   setStatus: (status, statusMessage = null) => {
     set({ status, statusMessage })
@@ -67,10 +117,27 @@ export const useAudioStore = create<AudioStore>((set, get) => ({
   setWarningMessage: (warningMessage) => {
     set({ warningMessage })
   },
-  markBeat: (beatEventTime) => {
+  markBeat: (beatEventTime, beatIndex) => {
     set((state) => ({
       beatEventTime,
+      beatIndex,
       beatPulse: state.beatPulse + 1,
+    }))
+  },
+  resetSyncBase: (time) => {
+    const { bpm, beatOffset } = get()
+    const nextMetrics = calculateBeatMetrics({
+      currentTime: time,
+      bpm,
+      beatOffset,
+    })
+    set((state) => ({
+      currentTime: time,
+      beatIndex: nextMetrics.beatIndex,
+      beatPhase: nextMetrics.beatPhase,
+      beatProgress: nextMetrics.beatProgress,
+      beatInterval: nextMetrics.beatInterval,
+      syncResetToken: state.syncResetToken + 1,
     }))
   },
 }))

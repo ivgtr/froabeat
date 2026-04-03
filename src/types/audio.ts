@@ -19,6 +19,11 @@ export type AudioState = {
   warningMessage: string | null
   beatPulse: number
   beatEventTime: number | null
+  beatIndex: number
+  beatPhase: number
+  beatProgress: number
+  beatInterval: number
+  syncResetToken: number
 }
 
 export type AudioActions = {
@@ -29,13 +34,15 @@ export type AudioActions = {
   setPlaybackRate: (rate: PlaybackRate) => void
   setPlaybackRateByStep: (direction: -1 | 1) => void
   setCurrentTime: (time: number) => void
+  setPlaybackTime: (time: number) => void
   setDuration: (duration: number) => void
   setLooping: (isLooping: boolean) => void
   setBpm: (bpm: number | null) => void
   setBeatOffset: (offset: number | null) => void
   setStatus: (status: AudioLoadStatus, message?: string | null) => void
   setWarningMessage: (message: string | null) => void
-  markBeat: (time: number) => void
+  markBeat: (time: number, beatIndex: number) => void
+  resetSyncBase: (time: number) => void
 }
 
 export type AudioStore = AudioState & AudioActions
@@ -55,4 +62,9 @@ export const createInitialAudioState = (): AudioState => ({
   warningMessage: null,
   beatPulse: 0,
   beatEventTime: null,
+  beatIndex: 0,
+  beatPhase: 0,
+  beatProgress: 0,
+  beatInterval: 0.5,
+  syncResetToken: 0,
 })

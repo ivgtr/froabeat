@@ -1,5 +1,6 @@
-import { PLAYBACK_RATE_STEPS } from '../../types/audio'
 import { useAudioStore } from '../../stores/audioStore'
+import { useBoardStore } from '../../stores/boardStore'
+import { PLAYBACK_RATE_STEPS } from '../../types/audio'
 
 type ControlDockProps = {
   onTogglePlay: () => void
@@ -16,10 +17,14 @@ function ControlDock({ onTogglePlay }: ControlDockProps) {
   const status = useAudioStore((state) => state.status)
   const statusMessage = useAudioStore((state) => state.statusMessage)
   const warningMessage = useAudioStore((state) => state.warningMessage)
+  const beatIndex = useAudioStore((state) => state.beatIndex)
+  const beatPhase = useAudioStore((state) => state.beatPhase)
   const setLooping = useAudioStore((state) => state.setLooping)
   const setPlaybackRateByStep = useAudioStore(
     (state) => state.setPlaybackRateByStep,
   )
+  const isGifBounceEnabled = useBoardStore((state) => state.isGifBounceEnabled)
+  const setGifBounceEnabled = useBoardStore((state) => state.setGifBounceEnabled)
 
   const hasAudio = file !== null
   const isAtMinRate = playbackRate === PLAYBACK_RATE_STEPS[0]
@@ -35,7 +40,6 @@ function ControlDock({ onTogglePlay }: ControlDockProps) {
     const seconds = Math.floor(safe % 60)
     return `${minutes}:${seconds.toString().padStart(2, '0')}`
   }
-
   return (
     <aside className="control-dock" aria-label="Playback controls">
       <p className={`dock-badge is-${status}`}>{status.toUpperCase()}</p>
@@ -79,7 +83,17 @@ function ControlDock({ onTogglePlay }: ControlDockProps) {
           {formatTime(currentTime)} / {formatTime(duration)}
         </p>
       </div>
+      <div className="dock-row">
+        <button
+          type="button"
+          className={`loop-button ${isGifBounceEnabled ? 'is-active' : ''}`}
+          onClick={() => setGifBounceEnabled(!isGifBounceEnabled)}
+        >
+          バウンド: {isGifBounceEnabled ? 'ON' : 'OFF'}
+        </button>
+      </div>
       <p className="dock-caption">BPM: {bpm ?? '--'}</p>
+      <p className="dock-caption">Beat: {beatIndex}.{Math.floor(beatPhase * 100)}</p>
       {statusMessage && (
         <p className={`dock-status is-${status}`} aria-live="polite">
           {statusMessage}
