@@ -11,6 +11,10 @@
   --text-muted: color-mix(in srgb, var(--color-text) 66%, transparent);
   --surface-soft: color-mix(in srgb, var(--color-bg) 86%, transparent);
 
+  --theme-ring-a: color-mix(in srgb, var(--color-accent) 48%, transparent);
+  --theme-ring-b: color-mix(in srgb, var(--color-text) 34%, transparent);
+  --theme-ring-c: color-mix(in srgb, var(--color-text) 24%, transparent);
+
   font-family: var(--font-body);
   font-size: 16px;
   line-height: 1.9;

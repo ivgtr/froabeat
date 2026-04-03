@@ -8,12 +8,15 @@ import { analyzeTempo } from './features/audio/analyzeTempo'
 import { AudioEngine } from './features/audio/audioEngine'
 import { BeatScheduler } from './features/audio/beatScheduler'
 import { useFileInput } from './features/file-input/useFileInput'
+import { useApplyColorTheme } from './hooks/useApplyColorTheme'
 import { createGifItems } from './lib/gifItemFactory'
 import { useAudioStore } from './stores/audioStore'
 import { useBoardStore } from './stores/boardStore'
 import './styles/app.css'
 
 function App() {
+  useApplyColorTheme()
+
   const audioEngineRef = useRef<AudioEngine>(new AudioEngine())
   const beatSchedulerRef = useRef<BeatScheduler>(new BeatScheduler())
   const objectUrlRef = useRef<string | null>(null)

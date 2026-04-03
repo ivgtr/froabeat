@@ -81,6 +81,7 @@ export type BoardState = {
   selectedItemId: string | null
   camera: CameraState
   isGifBounceEnabled: boolean
+  colorThemeIndex: number
 }
 
 export type BoardActions = {
@@ -96,6 +97,7 @@ export type BoardActions = {
   panCamera: (dx: number, dy: number) => void
   setZoom: (zoom: number) => void
   setGifBounceEnabled: (enabled: boolean) => void
+  cycleColorTheme: () => void
   resetBoard: () => void
 }
 
@@ -110,4 +112,5 @@ export const createInitialBoardState = (): BoardState => ({
     zoom: 1,
   },
   isGifBounceEnabled: true,
+  colorThemeIndex: 0,
 })

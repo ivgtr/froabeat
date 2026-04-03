@@ -55,8 +55,8 @@
 }
 
 .gif-item.is-selected {
-  border-color: var(--color-accent);
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-accent) 52%, transparent);
+  border-color: #9aa7ae;
+  box-shadow: 0 0 0 1px rgba(154, 167, 174, 0.52);
 }
 
 .gif-item.is-selected:active {
@@ -118,17 +118,17 @@
 .beat-ring {
   width: 210px;
   height: 210px;
-  border: 1px solid color-mix(in srgb, var(--color-accent) 48%, transparent);
+  border: 1px solid var(--theme-ring-a);
   transform: scale(0.52);
-  opacity: 0.16;
+  opacity: 0.28;
 }
 
 .beat-ring.ring-b {
-  border-color: color-mix(in srgb, var(--color-text) 34%, transparent);
+  border-color: var(--theme-ring-b);
 }
 
 .beat-ring.ring-c {
-  border-color: color-mix(in srgb, var(--color-text) 24%, transparent);
+  border-color: var(--theme-ring-c);
 }
 
 .beat-ring.is-animated {
@@ -136,11 +136,24 @@
 }
 
 .beat-ring.is-soft {
-  opacity: 0.08;
+  opacity: 0.12;
 }
 
 .beat-core.is-error {
   background: color-mix(in srgb, var(--color-text) 76%, var(--color-bg));
+}
+
+.beat-theme-trigger {
+  position: absolute;
+  width: 80px;
+  height: 80px;
+  border-radius: 999px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  pointer-events: auto;
+  padding: 0;
+  outline: none;
 }
 
 .beat-meta {
@@ -151,6 +164,15 @@
   font-size: 10px;
   letter-spacing: 0.06em;
   color: var(--text-muted);
+}
+
+.beat-theme-label {
+  position: absolute;
+  margin: 210px 0 0;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  color: color-mix(in srgb, var(--color-accent) 60%, transparent);
 }
 
 .beat-meta.is-analyzing,
@@ -345,15 +367,15 @@
 @keyframes beat-ring-pulse {
   0% {
     transform: scale(0.52);
-    opacity: 0.2;
+    opacity: 0.45;
   }
 
-  35% {
-    opacity: 0.36;
+  25% {
+    opacity: 0.55;
   }
 
   100% {
-    transform: scale(2.35);
+    transform: scale(3.8);
     opacity: 0;
   }
 }

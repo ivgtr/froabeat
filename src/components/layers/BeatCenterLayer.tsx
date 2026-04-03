@@ -1,4 +1,5 @@
 import type { CSSProperties } from 'react'
+import { COLOR_THEMES } from '../../lib/colorThemes'
 import { useAudioStore } from '../../stores/audioStore'
 import { useBoardStore } from '../../stores/boardStore'
 
@@ -10,7 +11,10 @@ function BeatCenterLayer() {
   const status = useAudioStore((state) => state.status)
   const file = useAudioStore((state) => state.file)
   const itemCount = useBoardStore((state) => state.items.length)
+  const cycleColorTheme = useBoardStore((state) => state.cycleColorTheme)
+  const colorThemeIndex = useBoardStore((state) => state.colorThemeIndex)
   const isEmpty = file === null && itemCount === 0
+  const themeName = COLOR_THEMES[colorThemeIndex]?.name ?? 'DEFAULT'
 
   const beatIntervalMs = bpm ? 60000 / bpm : 500
   const pulseDurationMs = Math.min(760, Math.max(220, beatIntervalMs * 0.82))
@@ -56,6 +60,12 @@ function BeatCenterLayer() {
         className={`beat-core ${isPlaying ? 'is-animated' : ''} ${isErrored ? 'is-error' : ''}`}
         style={coreStyle}
       />
+      <button
+        type="button"
+        className="beat-theme-trigger"
+        onClick={cycleColorTheme}
+        aria-label="テーマカラーを切り替え"
+      />
       <p className={`beat-meta ${isAnalyzing ? 'is-analyzing' : ''} ${isErrored ? 'is-error' : ''}`}>
         {isPlaying
           ? `BEAT ${bpm ?? '--'} BPM`
@@ -67,6 +77,7 @@ function BeatCenterLayer() {
                 ? 'DROP / DBL-CLICK'
                 : 'STANDBY'}
       </p>
+      <span className="beat-theme-label">{themeName}</span>
     </section>
   )
 }

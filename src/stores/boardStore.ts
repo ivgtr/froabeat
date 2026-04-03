@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { releaseGifPlaybackData } from '../features/gif/gifPlayback'
+import { COLOR_THEMES } from '../lib/colorThemes'
 import {
   createDefaultGifSyncSettings,
   createInitialBoardState,
@@ -183,6 +184,11 @@ export const useBoardStore = create<BoardStore>((set) => ({
       }
       return { isGifBounceEnabled: enabled }
     })
+  },
+  cycleColorTheme: () => {
+    set((state) => ({
+      colorThemeIndex: (state.colorThemeIndex + 1) % COLOR_THEMES.length,
+    }))
   },
   resetBoard: () => {
     set((state) => {
