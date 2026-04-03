@@ -6,11 +6,14 @@ function BeatCenterLayer() {
   const bpm = useAudioStore((state) => state.bpm)
   const isPlaying = useAudioStore((state) => state.isPlaying)
   const playbackRate = useAudioStore((state) => state.playbackRate)
+  const status = useAudioStore((state) => state.status)
 
   const beatIntervalMs = bpm ? 60000 / bpm : 500
-  const pulseDurationMs = Math.min(760, Math.max(260, beatIntervalMs * 0.86))
+  const pulseDurationMs = Math.min(760, Math.max(220, beatIntervalMs * 0.82))
   const ringDurationMs = pulseDurationMs + 260
   const speedModifier = Math.min(1.5, Math.max(0.8, playbackRate))
+  const isAnalyzing = status === 'loading' || status === 'analyzing'
+  const isErrored = status === 'error'
 
   const coreStyle: CSSProperties = {
     animationDuration: `${pulseDurationMs / speedModifier}ms`,
@@ -31,25 +34,33 @@ function BeatCenterLayer() {
     <section className="beat-center-layer" aria-label="Beat center visualization">
       <div
         key={`ring-a-${beatPulse}`}
-        className={`beat-ring ring-a ${isPlaying ? 'is-animated' : ''}`}
+        className={`beat-ring ring-a ${isPlaying ? 'is-animated' : ''} ${isAnalyzing ? 'is-soft' : ''}`}
         style={ringAStyle}
       />
       <div
         key={`ring-b-${beatPulse}`}
-        className={`beat-ring ring-b ${isPlaying ? 'is-animated' : ''}`}
+        className={`beat-ring ring-b ${isPlaying ? 'is-animated' : ''} ${isAnalyzing ? 'is-soft' : ''}`}
         style={ringBStyle}
       />
       <div
         key={`ring-c-${beatPulse}`}
-        className={`beat-ring ring-c ${isPlaying ? 'is-animated' : ''}`}
+        className={`beat-ring ring-c ${isPlaying ? 'is-animated' : ''} ${isAnalyzing ? 'is-soft' : ''}`}
         style={ringCStyle}
       />
       <div
         key={`core-${beatPulse}`}
-        className={`beat-core ${isPlaying ? 'is-animated' : ''}`}
+        className={`beat-core ${isPlaying ? 'is-animated' : ''} ${isErrored ? 'is-error' : ''}`}
         style={coreStyle}
       />
-      <p className="beat-meta">{isPlaying ? `BEAT ${bpm ?? '--'} BPM` : 'STANDBY'}</p>
+      <p className={`beat-meta ${isAnalyzing ? 'is-analyzing' : ''} ${isErrored ? 'is-error' : ''}`}>
+        {isPlaying
+          ? `BEAT ${bpm ?? '--'} BPM`
+          : isAnalyzing
+            ? 'ANALYZING...'
+            : isErrored
+              ? 'AUDIO ERROR'
+              : 'STANDBY'}
+      </p>
     </section>
   )
 }

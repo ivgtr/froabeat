@@ -1,8 +1,17 @@
-import { useEffect, useMemo, useRef, useState, type PointerEvent } from 'react'
+import {
+  memo,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type PointerEvent,
+} from 'react'
 import { useBoardStore } from '../../stores/boardStore'
+import { useShallow } from 'zustand/react/shallow'
 
 const MIN_ITEM_SIZE = 48
 const CULLING_MARGIN = 180
+const MOVE_UPDATE_EPSILON = 0.2
 
 type PanInteraction = {
   mode: 'pan'
@@ -41,14 +50,27 @@ function MainCanvasLayer() {
     height: window.innerHeight,
   }))
 
-  const items = useBoardStore((state) => state.items)
-  const selectedItemId = useBoardStore((state) => state.selectedItemId)
-  const camera = useBoardStore((state) => state.camera)
-  const updateItem = useBoardStore((state) => state.updateItem)
-  const removeItem = useBoardStore((state) => state.removeItem)
-  const setSelectedItemId = useBoardStore((state) => state.setSelectedItemId)
-  const panCamera = useBoardStore((state) => state.panCamera)
-  const bringItemToFront = useBoardStore((state) => state.bringItemToFront)
+  const {
+    items,
+    selectedItemId,
+    camera,
+    updateItem,
+    removeItem,
+    setSelectedItemId,
+    panCamera,
+    bringItemToFront,
+  } = useBoardStore(
+    useShallow((state) => ({
+      items: state.items,
+      selectedItemId: state.selectedItemId,
+      camera: state.camera,
+      updateItem: state.updateItem,
+      removeItem: state.removeItem,
+      setSelectedItemId: state.setSelectedItemId,
+      panCamera: state.panCamera,
+      bringItemToFront: state.bringItemToFront,
+    })),
+  )
 
   const sortedItems = useMemo(
     () => [...items].sort((a, b) => a.zIndex - b.zIndex),
@@ -184,9 +206,17 @@ function MainCanvasLayer() {
     if (interaction.mode === 'move') {
       const dx = event.clientX - interaction.startX
       const dy = event.clientY - interaction.startY
+      const nextX = interaction.originX + dx
+      const nextY = interaction.originY + dy
+      if (
+        Math.abs(nextX - interaction.originX) < MOVE_UPDATE_EPSILON &&
+        Math.abs(nextY - interaction.originY) < MOVE_UPDATE_EPSILON
+      ) {
+        return
+      }
       updateItem(interaction.itemId, {
-        x: interaction.originX + dx,
-        y: interaction.originY + dy,
+        x: nextX,
+        y: nextY,
       })
       event.preventDefault()
       return
@@ -194,9 +224,17 @@ function MainCanvasLayer() {
 
     const dx = event.clientX - interaction.startX
     const dy = event.clientY - interaction.startY
+    const nextWidth = Math.max(MIN_ITEM_SIZE, interaction.originWidth + dx)
+    const nextHeight = Math.max(MIN_ITEM_SIZE, interaction.originHeight + dy)
+    if (
+      Math.abs(nextWidth - interaction.originWidth) < MOVE_UPDATE_EPSILON &&
+      Math.abs(nextHeight - interaction.originHeight) < MOVE_UPDATE_EPSILON
+    ) {
+      return
+    }
     updateItem(interaction.itemId, {
-      width: Math.max(MIN_ITEM_SIZE, interaction.originWidth + dx),
-      height: Math.max(MIN_ITEM_SIZE, interaction.originHeight + dy),
+      width: nextWidth,
+      height: nextHeight,
     })
     event.preventDefault()
   }
@@ -281,4 +319,4 @@ function MainCanvasLayer() {
   )
 }
 
-export default MainCanvasLayer
+export default memo(MainCanvasLayer)

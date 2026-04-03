@@ -25,7 +25,8 @@ function ControlDock({ onTogglePlay }: ControlDockProps) {
   const isAtMinRate = playbackRate === PLAYBACK_RATE_STEPS[0]
   const isAtMaxRate =
     playbackRate === PLAYBACK_RATE_STEPS[PLAYBACK_RATE_STEPS.length - 1]
-  const canStartPlayback = hasAudio && status !== 'loading' && status !== 'analyzing'
+  const isBusy = status === 'loading' || status === 'analyzing'
+  const canStartPlayback = hasAudio && !isBusy
   const canPausePlayback = hasAudio && isPlaying
 
   const formatTime = (value: number) => {
@@ -37,6 +38,7 @@ function ControlDock({ onTogglePlay }: ControlDockProps) {
 
   return (
     <aside className="control-dock" aria-label="Playback controls">
+      <p className={`dock-badge is-${status}`}>{status.toUpperCase()}</p>
       <button
         type="button"
         className="play-button"
@@ -50,7 +52,7 @@ function ControlDock({ onTogglePlay }: ControlDockProps) {
           type="button"
           aria-label="再生速度を下げる"
           onClick={() => setPlaybackRateByStep(-1)}
-          disabled={!hasAudio || isAtMinRate}
+          disabled={!hasAudio || isAtMinRate || isBusy}
         >
           ◀
         </button>
@@ -59,7 +61,7 @@ function ControlDock({ onTogglePlay }: ControlDockProps) {
           type="button"
           aria-label="再生速度を上げる"
           onClick={() => setPlaybackRateByStep(1)}
-          disabled={!hasAudio || isAtMaxRate}
+          disabled={!hasAudio || isAtMaxRate || isBusy}
         >
           ▶
         </button>
@@ -69,7 +71,7 @@ function ControlDock({ onTogglePlay }: ControlDockProps) {
           type="button"
           className={`loop-button ${isLooping ? 'is-active' : ''}`}
           onClick={() => setLooping(!isLooping)}
-          disabled={!hasAudio}
+          disabled={!hasAudio || isBusy}
         >
           ループ: {isLooping ? 'ON' : 'OFF'}
         </button>
@@ -83,7 +85,11 @@ function ControlDock({ onTogglePlay }: ControlDockProps) {
           {statusMessage}
         </p>
       )}
-      {warningMessage && <p className="dock-warning">{warningMessage}</p>}
+      {warningMessage && (
+        <p className="dock-warning" aria-live="polite">
+          {warningMessage}
+        </p>
+      )}
     </aside>
   )
 }

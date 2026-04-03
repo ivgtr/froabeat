@@ -4,6 +4,8 @@ type BeatSchedulerConfig = {
 }
 
 const EPSILON = 0.001
+const MAX_BEATS_PER_TICK = 8
+const LOOP_DETECTION_THRESHOLD = 10
 
 export class BeatScheduler {
   private bpm: number | null = null
@@ -31,7 +33,10 @@ export class BeatScheduler {
       return false
     }
 
-    if (currentTime + EPSILON < this.previousTime) {
+    if (
+      currentTime + EPSILON < this.previousTime ||
+      Math.abs(currentTime - this.previousTime) >= LOOP_DETECTION_THRESHOLD
+    ) {
       this.reset(currentTime)
     }
 
@@ -45,10 +50,16 @@ export class BeatScheduler {
 
     const interval = 60 / this.bpm
     let didTrigger = false
+    let guard = 0
 
-    while (currentTime + EPSILON >= this.nextBeatTime) {
+    while (currentTime + EPSILON >= this.nextBeatTime && guard < MAX_BEATS_PER_TICK) {
       this.nextBeatTime += interval
       didTrigger = true
+      guard += 1
+    }
+
+    if (guard >= MAX_BEATS_PER_TICK) {
+      this.nextBeatTime = this.calculateNextBeatTime(currentTime + interval)
     }
 
     this.previousTime = currentTime

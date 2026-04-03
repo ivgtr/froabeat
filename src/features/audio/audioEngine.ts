@@ -22,6 +22,10 @@ export class AudioEngine {
 
   private onPlaybackEnded: PlaybackEndedHandler = null
 
+  private playPromise: Promise<void> | null = null
+
+  private playGeneration = 0
+
   setPlaybackEndedHandler(handler: PlaybackEndedHandler) {
     this.onPlaybackEnded = handler
   }
@@ -56,27 +60,49 @@ export class AudioEngine {
       return
     }
 
-    const context = await this.ensureContextRunning()
-    const source = context.createBufferSource()
-    source.buffer = this.buffer
-    source.loop = this.isLooping
-    source.playbackRate.setValueAtTime(this.playbackRate, context.currentTime)
-    source.connect(context.destination)
-    source.onended = () => {
-      if (this.didManualStop) {
-        this.didManualStop = false
+    if (this.playPromise) {
+      await this.playPromise
+      return
+    }
+
+    const generationAtRequest = this.playGeneration
+    this.playPromise = (async () => {
+      const context = await this.ensureContextRunning()
+      if (
+        generationAtRequest !== this.playGeneration ||
+        this.sourceNode !== null ||
+        !this.buffer
+      ) {
         return
       }
 
-      this.sourceNode = null
-      this.offsetSeconds = 0
-      this.startedAtContextTime = 0
-      this.onPlaybackEnded?.()
-    }
+      const source = context.createBufferSource()
+      source.buffer = this.buffer
+      source.loop = this.isLooping
+      source.playbackRate.setValueAtTime(this.playbackRate, context.currentTime)
+      source.connect(context.destination)
+      source.onended = () => {
+        if (this.didManualStop) {
+          this.didManualStop = false
+          return
+        }
 
-    source.start(0, this.normalizeTime(this.offsetSeconds))
-    this.sourceNode = source
-    this.startedAtContextTime = context.currentTime
+        this.sourceNode = null
+        this.offsetSeconds = 0
+        this.startedAtContextTime = 0
+        this.onPlaybackEnded?.()
+      }
+
+      source.start(0, this.normalizeTime(this.offsetSeconds))
+      this.sourceNode = source
+      this.startedAtContextTime = context.currentTime
+    })()
+
+    try {
+      await this.playPromise
+    } finally {
+      this.playPromise = null
+    }
   }
 
   pause() {
@@ -89,6 +115,7 @@ export class AudioEngine {
   }
 
   stop() {
+    this.playGeneration += 1
     this.stopSourceOnly()
     this.offsetSeconds = 0
     this.startedAtContextTime = 0
@@ -142,6 +169,14 @@ export class AudioEngine {
     }
   }
 
+  getContextState(): AudioContextState | 'none' {
+    if (!this.context) {
+      return 'none'
+    }
+
+    return this.context.state
+  }
+
   dispose() {
     this.stop()
     this.buffer = null
@@ -167,6 +202,7 @@ export class AudioEngine {
   }
 
   private stopSourceOnly() {
+    this.playGeneration += 1
     if (!this.sourceNode) {
       return
     }

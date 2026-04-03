@@ -6,6 +6,8 @@ const FALLBACK_BPM = 120
 const WINDOW_SIZE = 1024
 const HOP_SIZE = 512
 const MIN_PEAK_INTERVAL_SECONDS = 0.08
+const MIN_ANALYZABLE_SECONDS = 1.0
+const FRAME_ANALYSIS_LIMIT = 28000
 
 const normalizeBpm = (rawBpm: number) => {
   let bpm = rawBpm
@@ -16,6 +18,10 @@ const normalizeBpm = (rawBpm: number) => {
     bpm /= 2
   }
   return bpm
+}
+
+const clamp = (value: number, min: number, max: number) => {
+  return Math.min(max, Math.max(min, value))
 }
 
 const createMonoSignal = (audioBuffer: AudioBuffer) => {
@@ -34,7 +40,10 @@ const createMonoSignal = (audioBuffer: AudioBuffer) => {
 }
 
 const calculateEnvelope = (signal: Float32Array) => {
-  const frameCount = Math.floor((signal.length - WINDOW_SIZE) / HOP_SIZE)
+  const frameCount = Math.min(
+    FRAME_ANALYSIS_LIMIT,
+    Math.floor((signal.length - WINDOW_SIZE) / HOP_SIZE) + 1,
+  )
   if (frameCount <= 0) {
     return []
   }
@@ -65,11 +74,11 @@ const detectPeaks = (envelope: number[], sampleRate: number) => {
     return []
   }
 
+  const sorted = [...onsets].sort((a, b) => a - b)
+  const percentileIndex = clamp(Math.floor(sorted.length * 0.85), 0, sorted.length - 1)
+  const p85 = sorted[percentileIndex]
   const mean = onsets.reduce((sum, value) => sum + value, 0) / onsets.length
-  const variance =
-    onsets.reduce((sum, value) => sum + (value - mean) ** 2, 0) / onsets.length
-  const std = Math.sqrt(variance)
-  const threshold = mean + std * 0.6
+  const threshold = Math.max(p85 * 0.45, mean * 1.8)
 
   const minimumGapFrames = Math.floor((MIN_PEAK_INTERVAL_SECONDS * sampleRate) / HOP_SIZE)
   const peaks: number[] = []
@@ -118,7 +127,7 @@ const estimateBpmFromPeaks = (peaks: number[], sampleRate: number) => {
         continue
       }
 
-      const bucket = Math.round(bpm)
+      const bucket = clamp(Math.round(bpm), MIN_BPM, MAX_BPM)
       const weight = 1 / offset
       histogram.set(bucket, (histogram.get(bucket) ?? 0) + weight)
     }
@@ -137,10 +146,38 @@ const estimateBpmFromPeaks = (peaks: number[], sampleRate: number) => {
     }
   }
 
-  return bestBpm
+  if (bestBpm === null) {
+    return null
+  }
+
+  // 隣接バケットを含めた平滑化でジッターを抑える。
+  let weightedSum = 0
+  let scoreSum = 0
+  for (let bpm = bestBpm - 2; bpm <= bestBpm + 2; bpm += 1) {
+    const score = histogram.get(bpm)
+    if (!score) {
+      continue
+    }
+    weightedSum += bpm * score
+    scoreSum += score
+  }
+
+  if (scoreSum <= 0) {
+    return bestBpm
+  }
+
+  return Math.round(weightedSum / scoreSum)
 }
 
 export const analyzeTempo = (audioBuffer: AudioBuffer): TempoAnalysisResult => {
+  if (audioBuffer.duration < MIN_ANALYZABLE_SECONDS) {
+    return {
+      bpm: FALLBACK_BPM,
+      beatOffset: 0,
+      usedFallback: true,
+    }
+  }
+
   const mono = createMonoSignal(audioBuffer)
   const envelope = calculateEnvelope(mono)
   const peaks = detectPeaks(envelope, audioBuffer.sampleRate)
@@ -154,7 +191,7 @@ export const analyzeTempo = (audioBuffer: AudioBuffer): TempoAnalysisResult => {
   }
 
   const estimatedBpm = estimateBpmFromPeaks(peaks, audioBuffer.sampleRate)
-  const bpm = estimatedBpm ?? FALLBACK_BPM
+  const bpm = clamp(estimatedBpm ?? FALLBACK_BPM, MIN_BPM, MAX_BPM)
   const firstPeakFrame = peaks[0]
   const beatOffset = (firstPeakFrame * HOP_SIZE) / audioBuffer.sampleRate
 

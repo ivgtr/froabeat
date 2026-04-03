@@ -36,11 +36,33 @@ export const useBoardStore = create<BoardStore>((set) => ({
     }))
   },
   updateItem: (id, patch) => {
-    set((state) => ({
-      items: state.items.map((item) =>
-        item.id === id ? { ...item, ...patch } : item,
-      ),
-    }))
+    set((state) => {
+      let didChange = false
+      const nextItems = state.items.map((item) => {
+        if (item.id !== id) {
+          return item
+        }
+
+        const nextItem = { ...item, ...patch }
+        const isEqual =
+          nextItem.x === item.x &&
+          nextItem.y === item.y &&
+          nextItem.width === item.width &&
+          nextItem.height === item.height &&
+          nextItem.rotation === item.rotation &&
+          nextItem.zIndex === item.zIndex &&
+          nextItem.isSelected === item.isSelected
+
+        if (isEqual) {
+          return item
+        }
+
+        didChange = true
+        return nextItem
+      })
+
+      return didChange ? { items: nextItems } : state
+    })
   },
   bringItemToFront: (id) => {
     set((state) => {
@@ -59,6 +81,10 @@ export const useBoardStore = create<BoardStore>((set) => ({
     set({ camera })
   },
   panCamera: (dx, dy) => {
+    if (dx === 0 && dy === 0) {
+      return
+    }
+
     set((state) => ({
       camera: {
         ...state.camera,

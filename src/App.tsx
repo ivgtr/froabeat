@@ -130,6 +130,7 @@ function App() {
       engine.pause()
       setCurrentTime(engine.getCurrentTime())
       setPlaying(false)
+      setStatus('ready', '一時停止しました。')
       return
     }
 
@@ -142,12 +143,21 @@ function App() {
     void engine
       .play()
       .then(() => {
+        const snapshot = engine.getSnapshot()
+        if (!snapshot.isPlaying) {
+          throw new Error('Playback source was not started')
+        }
+        setCurrentTime(snapshot.currentTime)
         setPlaying(true)
+        setStatus('ready', '再生中')
       })
       .catch((error: unknown) => {
         console.error(error)
         setPlaying(false)
-        setStatus('error', '再生を開始できませんでした。')
+        setStatus(
+          'error',
+          `再生を開始できませんでした（context: ${engine.getContextState()}）。`,
+        )
       })
   }, [setCurrentTime, setPlaying, setStatus])
 
@@ -210,11 +220,23 @@ function App() {
     const scheduler = beatSchedulerRef.current
 
     const tick = () => {
-      const currentTime = engine.getCurrentTime()
+      const snapshot = engine.getSnapshot()
+      const currentTime = snapshot.currentTime
       setCurrentTime(currentTime)
 
       if (scheduler.consume(currentTime)) {
         markBeat(currentTime)
+      }
+
+      if (!snapshot.isPlaying) {
+        setPlaying(false)
+        return
+      }
+
+      if (engine.getContextState() !== 'running') {
+        setPlaying(false)
+        setStatus('error', '音声コンテキストが停止したため再生を中断しました。')
+        return
       }
 
       if (useAudioStore.getState().isPlaying) {
@@ -227,7 +249,7 @@ function App() {
     return () => {
       cancelAnimationFrame(frameId)
     }
-  }, [isPlaying, markBeat, setCurrentTime])
+  }, [isPlaying, markBeat, setCurrentTime, setPlaying, setStatus])
 
   return (
     <AppShell

@@ -133,6 +133,14 @@
   border-color: rgba(255, 183, 122, 0.45);
 }
 
+.beat-ring.is-soft {
+  opacity: 0.12;
+}
+
+.beat-core.is-error {
+  background: #ff958f;
+}
+
 .beat-meta {
   position: absolute;
   margin: 188px 0 0;
@@ -143,6 +151,15 @@
   font-size: 10px;
   letter-spacing: 0.08em;
   color: rgba(255, 255, 255, 0.86);
+}
+
+.beat-meta.is-analyzing {
+  color: #9ad6ff;
+}
+
+.beat-meta.is-error {
+  color: #ff958f;
+  border-color: rgba(255, 149, 143, 0.4);
 }
 
 .overlay-layer {
@@ -188,6 +205,13 @@
   margin: 8px 0 0;
   color: rgba(244, 246, 248, 0.8);
   font-size: 13px;
+}
+
+.drop-guide {
+  margin: 8px 0 0;
+  font-size: 11px;
+  color: rgba(154, 214, 255, 0.9);
+  letter-spacing: 0.02em;
 }
 
 .drop-browse-button {
@@ -359,6 +383,34 @@
   overflow: hidden;
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
+}
+
+.dock-badge {
+  display: inline-flex;
+  align-items: center;
+  margin: 0 0 8px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: rgba(255, 255, 255, 0.82);
+}
+
+.dock-badge.is-loading,
+.dock-badge.is-analyzing {
+  border-color: rgba(154, 214, 255, 0.5);
+  color: #9ad6ff;
+}
+
+.dock-badge.is-ready {
+  border-color: rgba(168, 255, 176, 0.45);
+  color: #a8ffb0;
+}
+
+.dock-badge.is-error {
+  border-color: rgba(255, 149, 143, 0.45);
+  color: #ff958f;
 }
 
 @keyframes beat-core-pulse {
