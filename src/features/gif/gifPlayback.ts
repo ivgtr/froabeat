@@ -27,6 +27,7 @@ type DecodedGifPlaybackData = {
   width: number
   height: number
   durationMs: number
+  cycleDurationMs: number
   frames: DecodedGifFrame[]
 }
 
@@ -83,6 +84,70 @@ const toDelayMs = (durationMicros?: number): number => {
 
   const ms = durationMicros / 1000
   return Math.min(MAX_FRAME_DELAY_MS, Math.max(MIN_FRAME_DELAY_MS, Math.round(ms)))
+}
+
+const DHASH_SIZE = 8
+// dHash ハミング距離: ≤ この値なら類似、> なら異なると判定
+const DHASH_THRESHOLD = 5
+
+const computeDHash = (frame: ImageBitmap): Uint8Array | null => {
+  if (typeof OffscreenCanvas === 'undefined') return null
+  const w = DHASH_SIZE + 1
+  const h = DHASH_SIZE
+  const canvas = new OffscreenCanvas(w, h)
+  const ctx = canvas.getContext('2d')
+  if (!ctx) return null
+  ctx.drawImage(frame, 0, 0, w, h)
+  const { data } = ctx.getImageData(0, 0, w, h)
+
+  const hash = new Uint8Array(DHASH_SIZE)
+  for (let y = 0; y < h; y++) {
+    let byte = 0
+    for (let x = 0; x < DHASH_SIZE; x++) {
+      const idx = (y * w + x) * 4
+      const left = data[idx] * 0.299 + data[idx + 1] * 0.587 + data[idx + 2] * 0.114
+      const right =
+        data[idx + 4] * 0.299 + data[idx + 5] * 0.587 + data[idx + 6] * 0.114
+      if (left > right) {
+        byte |= 1 << x
+      }
+    }
+    hash[y] = byte
+  }
+  return hash
+}
+
+export const hammingDistance = (a: Uint8Array, b: Uint8Array): number => {
+  let dist = 0
+  for (let i = 0; i < a.length; i++) {
+    let xor = a[i] ^ b[i]
+    while (xor) {
+      dist += xor & 1
+      xor >>= 1
+    }
+  }
+  return dist
+}
+
+export const detectCycleDurationMs = (frames: DecodedGifFrame[], totalDurationMs: number): number => {
+  if (frames.length < 4) return totalDurationMs
+  const h0 = computeDHash(frames[0].image)
+  const h1 = computeDHash(frames[1].image)
+  const h2 = computeDHash(frames[2].image)
+  const h3 = computeDHash(frames[3].image)
+  if (!h0 || !h1 || !h2 || !h3) return totalDurationMs
+  const dist02 = hammingDistance(h0, h2)
+  const dist13 = hammingDistance(h1, h3)
+  const dist01 = hammingDistance(h0, h1)
+  // 先頭4フレームが全て類似 → 静止画 or 静→動GIF。ループパターンではない
+  if (dist01 <= DHASH_THRESHOLD && dist02 <= DHASH_THRESHOLD) {
+    return totalDurationMs
+  }
+  // A,B,A,B パターン: 1つ飛ばしが同一状態、隣接が異なる状態
+  if (dist02 <= DHASH_THRESHOLD && dist13 <= DHASH_THRESHOLD) {
+    return frames[0].delayMs + frames[1].delayMs
+  }
+  return totalDurationMs
 }
 
 const decodeGifFrames = async (file: File): Promise<DecodedGifPlaybackData> => {
@@ -184,11 +249,13 @@ const decodeGifFrames = async (file: File): Promise<DecodedGifPlaybackData> => {
         ? track.codedHeight
         : frames[0]?.image.height) ?? 1
 
+    const durationMs = Math.max(1, cursorMs)
     return {
       mode: 'decoded',
       width,
       height,
-      durationMs: Math.max(1, cursorMs),
+      durationMs,
+      cycleDurationMs: detectCycleDurationMs(frames, durationMs),
       frames,
     }
   } catch (error) {
@@ -265,4 +332,18 @@ export const resolveFrameAtTime = (
   }
 
   return playback.frames[0]
+}
+
+export const resolveTempoClockMs = (
+  cycleDurationMs: number,
+  beatProgress: number,
+  beatDivision: number,
+  phaseOffset: number,
+): number => {
+  const rawBeat = beatProgress + phaseOffset
+  const beatIndex = Math.floor(rawBeat)
+  const beatFrac = rawBeat - beatIndex
+  const step = ((beatIndex % beatDivision) + beatDivision) % beatDivision
+  const progress = (step + beatFrac) / beatDivision
+  return Math.min(progress * cycleDurationMs, cycleDurationMs * (1 - Number.EPSILON))
 }
