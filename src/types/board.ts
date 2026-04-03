@@ -76,6 +76,7 @@ export type GifItem = {
   beatDivision: number
   phaseOffset: number
   zIndex: number
+  isBounceEnabled: boolean
   isSelected: boolean
 }
 
@@ -114,6 +115,6 @@ export const createInitialBoardState = (): BoardState => ({
     y: 0,
     zoom: 1,
   },
-  isGifBounceEnabled: true,
+  isGifBounceEnabled: false,
   colorThemeIndex: 0,
 })

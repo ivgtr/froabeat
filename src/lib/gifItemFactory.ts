@@ -101,6 +101,7 @@ export const createGifItems = async ({
         beatDivision: syncDefaults.beatDivision,
         phaseOffset: syncDefaults.phaseOffset,
         zIndex: startZIndex + index + 1,
+        isBounceEnabled: false,
         isSelected: false,
       }
     }),

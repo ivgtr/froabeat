@@ -286,6 +286,7 @@ function MainCanvasLayer({ onOpenFilePicker }: MainCanvasLayerProps) {
     setCamera,
     panCamera,
     bringItemToFront,
+    setGifBounceEnabled,
   } = useBoardStore(
     useShallow((state) => ({
       items: state.items,
@@ -298,6 +299,7 @@ function MainCanvasLayer({ onOpenFilePicker }: MainCanvasLayerProps) {
       setCamera: state.setCamera,
       panCamera: state.panCamera,
       bringItemToFront: state.bringItemToFront,
+      setGifBounceEnabled: state.setGifBounceEnabled,
     })),
   )
 
@@ -529,6 +531,36 @@ function MainCanvasLayer({ onOpenFilePicker }: MainCanvasLayerProps) {
     }
   }, [applyZoomAtPoint, cameraZoom, viewportSize.height, viewportSize.width])
 
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Enter') {
+        return
+      }
+
+      const target = event.target as HTMLElement | null
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) {
+        return
+      }
+
+      event.preventDefault()
+
+      const state = useBoardStore.getState()
+      if (state.selectedItemId) {
+        const selected = state.items.find((item) => item.id === state.selectedItemId)
+        if (selected) {
+          updateItem(selected.id, { isBounceEnabled: !selected.isBounceEnabled })
+        }
+      } else {
+        setGifBounceEnabled(!state.isGifBounceEnabled)
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [updateItem, setGifBounceEnabled])
+
   const releasePointer = (pointerId: number) => {
     if (boardRef.current?.hasPointerCapture(pointerId)) {
       boardRef.current.releasePointerCapture(pointerId)
@@ -755,7 +787,7 @@ function MainCanvasLayer({ onOpenFilePicker }: MainCanvasLayerProps) {
         {visibleItems.map((item) => {
           const screenX = (item.x - camera.x) * cameraZoom
           const screenY = (item.y - camera.y) * cameraZoom
-          const visual = isGifBounceEnabled
+          const visual = isGifBounceEnabled && item.isBounceEnabled
             ? resolveSyncVisual(item, syncClock, isLowPowerMode)
             : { scale: 1, glowAlpha: 0 }
 
