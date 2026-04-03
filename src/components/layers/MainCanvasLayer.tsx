@@ -5,6 +5,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type MouseEvent as ReactMouseEvent,
   type PointerEvent,
   type WheelEvent as ReactWheelEvent,
 } from 'react'
@@ -761,7 +762,7 @@ function MainCanvasLayer() {
                 zIndex: item.zIndex,
                 filter:
                   visual.glowAlpha > 0
-                    ? `drop-shadow(0 0 14px rgba(163, 252, 255, ${visual.glowAlpha * 0.9}))`
+                    ? `drop-shadow(0 0 12px rgba(154, 167, 174, ${visual.glowAlpha * 0.8}))`
                     : undefined,
               }}
             >

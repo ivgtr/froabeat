@@ -1,5 +1,4 @@
 import { useAudioStore } from '../../stores/audioStore'
-import { useBoardStore } from '../../stores/boardStore'
 import { PLAYBACK_RATE_STEPS } from '../../types/audio'
 
 type ControlDockProps = {
@@ -9,30 +8,22 @@ type ControlDockProps = {
 function ControlDock({ onTogglePlay }: ControlDockProps) {
   const file = useAudioStore((state) => state.file)
   const isPlaying = useAudioStore((state) => state.isPlaying)
-  const isLooping = useAudioStore((state) => state.isLooping)
   const playbackRate = useAudioStore((state) => state.playbackRate)
   const currentTime = useAudioStore((state) => state.currentTime)
   const duration = useAudioStore((state) => state.duration)
   const bpm = useAudioStore((state) => state.bpm)
   const status = useAudioStore((state) => state.status)
   const statusMessage = useAudioStore((state) => state.statusMessage)
-  const warningMessage = useAudioStore((state) => state.warningMessage)
-  const beatIndex = useAudioStore((state) => state.beatIndex)
-  const beatPhase = useAudioStore((state) => state.beatPhase)
-  const setLooping = useAudioStore((state) => state.setLooping)
   const setPlaybackRateByStep = useAudioStore(
     (state) => state.setPlaybackRateByStep,
   )
-  const isGifBounceEnabled = useBoardStore((state) => state.isGifBounceEnabled)
-  const setGifBounceEnabled = useBoardStore((state) => state.setGifBounceEnabled)
 
   const hasAudio = file !== null
   const isAtMinRate = playbackRate === PLAYBACK_RATE_STEPS[0]
   const isAtMaxRate =
     playbackRate === PLAYBACK_RATE_STEPS[PLAYBACK_RATE_STEPS.length - 1]
   const isBusy = status === 'loading' || status === 'analyzing'
-  const canStartPlayback = hasAudio && !isBusy
-  const canPausePlayback = hasAudio && isPlaying
+  const canPlay = hasAudio && !isBusy
 
   const formatTime = (value: number) => {
     const safe = Number.isFinite(value) ? Math.max(0, value) : 0
@@ -40,68 +31,49 @@ function ControlDock({ onTogglePlay }: ControlDockProps) {
     const seconds = Math.floor(safe % 60)
     return `${minutes}:${seconds.toString().padStart(2, '0')}`
   }
+
+  const rateLabel = playbackRate !== 1
+    ? `${playbackRate.toFixed(1)}x`
+    : null
+
   return (
     <aside className="control-dock" aria-label="Playback controls">
-      <p className={`dock-badge is-${status}`}>{status.toUpperCase()}</p>
-      <button
-        type="button"
-        className="play-button"
-        onClick={onTogglePlay}
-        disabled={!canStartPlayback && !canPausePlayback}
-      >
-        {isPlaying ? '一時停止' : '再生'}
-      </button>
-      <div className="rate-control">
+      <div className="dock-transport">
         <button
           type="button"
-          aria-label="再生速度を下げる"
+          className="dock-btn"
+          aria-label="低速"
           onClick={() => setPlaybackRateByStep(-1)}
           disabled={!hasAudio || isAtMinRate || isBusy}
         >
-          ◀
+          «
         </button>
-        <p>{playbackRate.toFixed(2).replace(/\.00$/, '.0')}x</p>
         <button
           type="button"
-          aria-label="再生速度を上げる"
+          className="dock-btn dock-btn-play"
+          onClick={onTogglePlay}
+          disabled={!canPlay && !isPlaying}
+        >
+          {isPlaying ? '❚❚' : '▶'}
+        </button>
+        <button
+          type="button"
+          className="dock-btn"
+          aria-label="高速"
           onClick={() => setPlaybackRateByStep(1)}
           disabled={!hasAudio || isAtMaxRate || isBusy}
         >
-          ▶
+          »
         </button>
       </div>
-      <div className="dock-row">
-        <button
-          type="button"
-          className={`loop-button ${isLooping ? 'is-active' : ''}`}
-          onClick={() => setLooping(!isLooping)}
-          disabled={!hasAudio || isBusy}
-        >
-          ループ: {isLooping ? 'ON' : 'OFF'}
-        </button>
-        <p className="time-display">
-          {formatTime(currentTime)} / {formatTime(duration)}
-        </p>
-      </div>
-      <div className="dock-row">
-        <button
-          type="button"
-          className={`loop-button ${isGifBounceEnabled ? 'is-active' : ''}`}
-          onClick={() => setGifBounceEnabled(!isGifBounceEnabled)}
-        >
-          バウンド: {isGifBounceEnabled ? 'ON' : 'OFF'}
-        </button>
-      </div>
-      <p className="dock-caption">BPM: {bpm ?? '--'}</p>
-      <p className="dock-caption">Beat: {beatIndex}.{Math.floor(beatPhase * 100)}</p>
-      {statusMessage && (
+      <p className="dock-info">
+        {bpm ? `${bpm} BPM` : '-- BPM'}
+        {rateLabel ? ` · ${rateLabel}` : ''}
+        {` · ${formatTime(currentTime)} / ${formatTime(duration)}`}
+      </p>
+      {statusMessage && status !== 'ready' && (
         <p className={`dock-status is-${status}`} aria-live="polite">
           {statusMessage}
-        </p>
-      )}
-      {warningMessage && (
-        <p className="dock-warning" aria-live="polite">
-          {warningMessage}
         </p>
       )}
     </aside>
