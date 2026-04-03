@@ -1,11 +1,37 @@
 :root {
-  font-family: 'Space Grotesk', 'Hiragino Sans', 'Noto Sans JP', sans-serif;
-  line-height: 1.5;
+  --font-body: 'Noto Sans JP', 'Hiragino Sans', 'Yu Gothic', 'Meiryo', sans-serif;
+  --font-mono: 'JetBrains Mono', 'IBM Plex Mono', 'SFMono-Regular', Menlo, monospace;
+
+  --color-bg: #0c0c0c;
+  --color-text: #dadada;
+  --color-accent: #9aa7ae;
+
+  --line-strong: color-mix(in srgb, var(--color-text) 26%, transparent);
+  --line-soft: color-mix(in srgb, var(--color-text) 14%, transparent);
+  --text-muted: color-mix(in srgb, var(--color-text) 66%, transparent);
+  --surface-soft: color-mix(in srgb, var(--color-bg) 86%, transparent);
+
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.9;
   font-weight: 400;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  color-scheme: dark light;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --color-bg: #fafaf9;
+    --color-text: #1f2933;
+    --color-accent: #7f8f98;
+    --line-strong: color-mix(in srgb, var(--color-text) 22%, transparent);
+    --line-soft: color-mix(in srgb, var(--color-text) 12%, transparent);
+    --text-muted: color-mix(in srgb, var(--color-text) 64%, transparent);
+    --surface-soft: color-mix(in srgb, #ffffff 90%, transparent);
+  }
 }
 
 *,
@@ -24,4 +50,14 @@ body,
 body {
   margin: 0;
   min-width: 320px;
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
 }
