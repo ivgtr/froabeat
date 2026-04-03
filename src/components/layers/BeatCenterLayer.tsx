@@ -1,5 +1,6 @@
 import type { CSSProperties } from 'react'
 import { useAudioStore } from '../../stores/audioStore'
+import { useBoardStore } from '../../stores/boardStore'
 
 function BeatCenterLayer() {
   const beatPulse = useAudioStore((state) => state.beatPulse)
@@ -7,6 +8,9 @@ function BeatCenterLayer() {
   const isPlaying = useAudioStore((state) => state.isPlaying)
   const playbackRate = useAudioStore((state) => state.playbackRate)
   const status = useAudioStore((state) => state.status)
+  const file = useAudioStore((state) => state.file)
+  const itemCount = useBoardStore((state) => state.items.length)
+  const isEmpty = file === null && itemCount === 0
 
   const beatIntervalMs = bpm ? 60000 / bpm : 500
   const pulseDurationMs = Math.min(760, Math.max(220, beatIntervalMs * 0.82))
@@ -59,7 +63,9 @@ function BeatCenterLayer() {
             ? 'ANALYZING...'
             : isErrored
               ? 'AUDIO ERROR'
-              : 'STANDBY'}
+              : isEmpty
+                ? 'DROP / DBL-CLICK'
+                : 'STANDBY'}
       </p>
     </section>
   )
