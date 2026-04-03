@@ -17,6 +17,14 @@
 
 すべてクライアントサイドで完結し、ユーザーファイルを外部送信しません。
 
+## Keyboard Shortcuts
+
+| Key | Action |
+| --- | --- |
+| `Enter` | 選択中の GIF のバウンスをトグル / 未選択時は全体をトグル |
+| `Delete` / `Backspace` | 選択中の GIF を削除 |
+| `+` / `-` | キャンバスのズームイン / ズームアウト |
+
 ## Tech Stack
 
 React / TypeScript / Vite / Zustand / Web Audio API / Canvas / GitHub Pages
