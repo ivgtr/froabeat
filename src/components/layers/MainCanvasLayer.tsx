@@ -7,9 +7,11 @@ import {
   useState,
   type MouseEvent as ReactMouseEvent,
   type PointerEvent,
-  type WheelEvent as ReactWheelEvent,
 } from 'react'
-import { resolveFrameAtTime } from '../../features/gif/gifPlayback'
+import {
+  resolveFrameAtTime,
+  resolveTempoClockMs,
+} from '../../features/gif/gifPlayback'
 import { useAudioStore } from '../../stores/audioStore'
 import { useBoardStore } from '../../stores/boardStore'
 import type { GifItem } from '../../types/board'
@@ -26,7 +28,6 @@ const ZOOM_WHEEL_SENSITIVITY = 0.0016
 const HIGH_LOAD_VISIBLE_DECODED_COUNT = 10
 const MEDIUM_LOAD_VISIBLE_DECODED_COUNT = 5
 const FIXED_BOUNCE_CYCLES_PER_BEAT = 1
-const FIXED_LOOP_FRACTION_PER_BEAT = 0.5
 
 type PanInteraction = {
   mode: 'pan'
@@ -130,38 +131,34 @@ const resolveFrameClockMs = (
   if (item.playback.mode !== 'decoded') {
     return playbackNowMs
   }
-
   if (item.syncMode === 'off') {
     return playbackNowMs
   }
-
   if (!syncClock.isPlaying) {
     return syncClock.currentTime * 1000
   }
 
   if (item.syncMode === 'tempo') {
-    const frameCount = item.playback.frames.length
-    if (frameCount <= 0) {
-      return playbackNowMs
-    }
-    const phaseFrameOffset = item.phaseOffset * frameCount
-    const frameProgress =
-      syncClock.beatProgress * frameCount * FIXED_LOOP_FRACTION_PER_BEAT + phaseFrameOffset
-    const frameIndex =
-      ((((Math.floor(frameProgress) % frameCount) +
-        frameCount) %
-        frameCount) |
-        0)
-    return item.playback.frames[frameIndex].startAtMs
+    // cycleDurationMs（≤ durationMs）の範囲の値を返す。
+    // resolveFrameAtTime は % durationMs で正規化するため、
+    // cycleDurationMs < durationMs の場合は先頭サイクルのフレームのみ使用される（意図通り）。
+    return resolveTempoClockMs(
+      item.playback.cycleDurationMs,
+      syncClock.beatProgress,
+      item.beatDivision,
+      item.phaseOffset,
+    )
   }
 
+  // pulse / accent
   const syncPhase = normalizePhase(
     syncClock.beatProgress * item.beatDivision + item.phaseOffset,
   )
   const wave = Math.sin(syncPhase * Math.PI * 2)
-  const strength = isLowPowerMode ? Math.min(0.55, item.syncStrength) : item.syncStrength
+  const strength = isLowPowerMode
+    ? Math.min(0.55, item.syncStrength)
+    : item.syncStrength
   const modulation = 1 + wave * 0.42 * strength
-
   return syncClock.currentTime * 1000 * modulation
 }
 
@@ -393,12 +390,25 @@ function MainCanvasLayer({ onOpenFilePicker }: MainCanvasLayerProps) {
     const preventGestureDefault = (event: Event) => {
       event.preventDefault()
     }
-    // Chrome 系で ctrl+wheel 扱いになるピンチ時の既定ズームも抑止する。
-    const preventCtrlWheelZoom = (event: globalThis.WheelEvent) => {
-      if (!event.ctrlKey) {
-        return
-      }
+    const handleNativeWheel = (event: globalThis.WheelEvent) => {
+      if (event.deltaY === 0) return
       event.preventDefault()
+      const rect = node.getBoundingClientRect()
+      const viewportX = event.clientX - rect.left
+      const viewportY = event.clientY - rect.top
+      const zoomFactor = Math.exp(-event.deltaY * ZOOM_WHEEL_SENSITIVITY)
+      const zoom = useBoardStore.getState().camera.zoom
+      const clampedZoom = Math.min(MAX_RENDER_ZOOM, Math.max(MIN_RENDER_ZOOM, zoom))
+      const nextZoom = Math.min(MAX_RENDER_ZOOM, Math.max(MIN_RENDER_ZOOM, clampedZoom * zoomFactor))
+      if (Math.abs(nextZoom - clampedZoom) < 0.0001) return
+      const cam = useBoardStore.getState().camera
+      const worldX = cam.x + viewportX / clampedZoom
+      const worldY = cam.y + viewportY / clampedZoom
+      useBoardStore.getState().setCamera({
+        x: worldX - viewportX / nextZoom,
+        y: worldY - viewportY / nextZoom,
+        zoom: nextZoom,
+      })
     }
 
     node.addEventListener('gesturestart', preventGestureDefault as EventListener, {
@@ -410,7 +420,7 @@ function MainCanvasLayer({ onOpenFilePicker }: MainCanvasLayerProps) {
     node.addEventListener('gestureend', preventGestureDefault as EventListener, {
       passive: false,
     })
-    node.addEventListener('wheel', preventCtrlWheelZoom, {
+    node.addEventListener('wheel', handleNativeWheel, {
       passive: false,
     })
 
@@ -424,7 +434,7 @@ function MainCanvasLayer({ onOpenFilePicker }: MainCanvasLayerProps) {
         preventGestureDefault as EventListener,
       )
       node.removeEventListener('gestureend', preventGestureDefault as EventListener)
-      node.removeEventListener('wheel', preventCtrlWheelZoom)
+      node.removeEventListener('wheel', handleNativeWheel)
     }
   }, [])
 
@@ -714,20 +724,6 @@ function MainCanvasLayer({ onOpenFilePicker }: MainCanvasLayerProps) {
     releasePointer(event.pointerId)
   }
 
-  const handleWheel = (event: ReactWheelEvent<HTMLDivElement>) => {
-    if (event.deltaY === 0) {
-      return
-    }
-
-    event.preventDefault()
-    const rect = boardRef.current?.getBoundingClientRect()
-    const viewportX = rect ? event.clientX - rect.left : event.clientX
-    const viewportY = rect ? event.clientY - rect.top : event.clientY
-    const zoomFactor = Math.exp(-event.deltaY * ZOOM_WHEEL_SENSITIVITY)
-
-    applyZoomAtPoint(cameraZoom * zoomFactor, viewportX, viewportY)
-  }
-
   const handleDoubleClick = useCallback(
     (event: ReactMouseEvent<HTMLDivElement>) => {
       const target = event.target as HTMLElement
@@ -746,7 +742,6 @@ function MainCanvasLayer({ onOpenFilePicker }: MainCanvasLayerProps) {
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
       onPointerCancel={handlePointerCancel}
-      onWheel={handleWheel}
       onDoubleClick={handleDoubleClick}
     >
       <div
