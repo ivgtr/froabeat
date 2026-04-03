@@ -26,6 +26,8 @@ export const createDefaultGifSyncSettings = (): GifSyncSettings => ({
 const clamp = (value: number, min: number, max: number): number =>
   Math.min(max, Math.max(min, value))
 
+const MAX_BEAT_DIVISION = 64
+
 export const normalizeGifSyncSettings = (
   patch: Partial<GifSyncSettings>,
 ): GifSyncSettings => {
@@ -38,12 +40,13 @@ export const normalizeGifSyncSettings = (
     0,
     1,
   )
-  const rawDivision = Number.isFinite(patch.beatDivision)
-    ? Math.round(Number(patch.beatDivision))
-    : defaults.beatDivision
-  const beatDivision = [1, 2, 3, 4, 6, 8, 12, 16].includes(rawDivision)
-    ? rawDivision
-    : defaults.beatDivision
+  const beatDivision = clamp(
+    Number.isFinite(patch.beatDivision)
+      ? Math.round(Number(patch.beatDivision))
+      : defaults.beatDivision,
+    1,
+    MAX_BEAT_DIVISION,
+  )
   const phaseOffset = clamp(
     Number.isFinite(patch.phaseOffset) ? Number(patch.phaseOffset) : defaults.phaseOffset,
     -0.99,
