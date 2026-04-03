@@ -1,8 +1,26 @@
 {
   "name": "froabeat",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
+  "description": "Beat visualizer & GIF collage on an infinite canvas",
   "type": "module",
+  "homepage": "https://ivgtr.github.io/froabeat/",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ivgtr/froabeat.git"
+  },
+  "author": "ivgtr",
+  "license": "MIT",
+  "keywords": [
+    "beat",
+    "visualizer",
+    "gif",
+    "collage",
+    "web-audio",
+    "canvas",
+    "bpm",
+    "music"
+  ],
   "scripts": {
     "preinstall": "node -e \"const ua=process.env.npm_config_user_agent||''; if(!ua.includes('pnpm')){console.error('\\n[ERROR] This project requires pnpm.\\nUse: pnpm install\\n'); process.exit(1)}\"",
     "dev": "vite",
